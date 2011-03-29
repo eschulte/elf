@@ -1,0 +1,1 @@
+main(){puts("hello world");}
