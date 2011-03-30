@@ -29,7 +29,18 @@
 (ql:quickload :cl-ppcre)
 (ql:quickload :metabang-bind)
 (defpackage #:elf
-  (:use :common-lisp :com.gigamonkeys.binary-data :cl-ppcre :metabang-bind))
+  (:use :common-lisp :com.gigamonkeys.binary-data :cl-ppcre :metabang-bind)
+  (:export
+   ;; functions
+   :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
+   :show-dynamic :show-symbols :show-file-layout :show-memory-layout
+   ;; methods
+   :un-type :ptr  :val :binding :type :offset  :vma 
+   :size  :type  :flags :alignment :read-value :write-value
+   ;; section class
+   :elf :sh :ph :name :data
+   ;; elf class
+   :header :section-table :program-table :sections :ordering))
 (in-package #:elf)
 
 ;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
