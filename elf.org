@@ -1,7 +1,7 @@
 #+TITLE: A Common Lisp library for manipulating ELF files
 #+OPTIONS: num:nil ^:nil
 #+STARTUP: hideblocks
-#+STYLE: <link rel="stylesheet" href="/stylesheet.css" type="text/css">
+#+STYLE: <link rel="stylesheet" href="/~eschulte/stylesheet.css" type="text/css">
 
 * ELF
 file:elf.lisp is a common lisp library for the manipulation of ELF
