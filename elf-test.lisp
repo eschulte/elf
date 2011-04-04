@@ -31,17 +31,6 @@
 (stefil:in-suite elf-test)
 
 
-;;; helper functions
-(defun shell (cmd &rest args)
-  ;; NOTE: this function is most likely CLisp specific
-  (let ((stdout (apply #'ext:run-program
-                       (append (list cmd :output :stream)
-                               (when args (list :arguments args))))))
-    (loop for line = (read-line stdout nil)
-       until (not line)
-       collect line)))
-
-
 ;;; generic forensic functions over arbitrary objects
 (defun show-it (hd &optional out)
   "Print the fields of a elf, section or program header.

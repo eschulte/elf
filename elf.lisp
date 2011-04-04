@@ -34,6 +34,7 @@
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
+   :mapslots :generic-copy
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
@@ -46,6 +47,45 @@
 
 ;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
+
+
+;;; Utility functions
+(defun shell (cmd &rest args)
+  (let ((stdout (apply #+clisp
+                       #'ext:run-program
+                       #-clisp
+                       (error "only implemented for clisp")
+                       (append (list cmd :output :stream)
+                               (when args (list :arguments args))))))
+    (loop for line = (read-line stdout nil)
+       until (not line)
+       collect line)))
+
+(defun mapslots (func obj)
+  "Map func over the slots of the clos object OBJ."
+  (mapcar func
+          (mapcar #'clos::slot-definition-name
+                  (clos::class-slots (class-of obj)))))
+
+(defun generic-copy (obj &optional trace)
+  "A generic copy method."
+  (let ((trace1 (concatenate 'list (list obj) trace)))
+    (cond
+      ((member obj trace) obj)
+      ((stringp obj) (copy-seq obj))
+      ((or (listp obj) (vectorp obj))
+       (coerce (mapcar (lambda (el) (generic-copy el trace1)) (coerce obj 'list))
+               (cond ((listp obj) 'list) ((vectorp obj) 'vector))))
+      ((numberp obj) obj)
+      ((symbolp obj) obj)
+      ((clos::class-slots (class-of obj))
+       (let ((new (make-instance (class-name (class-of obj)))))
+         (mapslots
+          (lambda (slot) (setf (slot-value new slot)
+                          (generic-copy (slot-value obj slot) trace1)))
+          obj)
+         new))
+      (t (error "~&don't know how to copy ~a" obj)))))
 
 
 ;;; Basic Binary types
