@@ -158,7 +158,7 @@
 
 ;; dictionaries
 (defmacro define-elf-dictionary (name num sign dictionary)
-  (declare (indent 3))
+  ; (declare (indent 3))
   `(define-binary-type ,name ()
      (:reader (in)
               (let ((byte (bytes-from in ,num ,sign)))
@@ -206,12 +206,12 @@
           (if (eq *endian* 'little) (reverse steps) steps))
     buf))
 
-(defun bytes-from (in bytes &optional signed-p &aux steps)
+(defun bytes-from (in bytes &optional signed-p)
   (let ((buf (make-array bytes :element-type '(unsigned-byte 8))))
     (read-sequence buf in)
     (bytes-to-int (coerce buf 'list) signed-p)))
 
-(defun bytes-to (out bytes value &optional signed-p &aux steps)
+(defun bytes-to (out bytes value &optional signed-p)
   (write-sequence (int-to-bytes value bytes signed-p) out))
 
 (define-binary-type unsigned-integer (bytes)
@@ -388,10 +388,10 @@
           ((member (tag dyn) ptr)     :ptr)
           ((member (tag dyn) ignored) :ignored))))
 
-(defmethod ptr ((dyn elf-dyn) &aux steps)
+(defmethod ptr ((dyn elf-dyn))
   (when (equal (un-type dyn) :ptr) (bytes-to-int (un dyn))))
 
-(defmethod (setf ptr) (new (dyn elf-dyn) &aux steps)
+(defmethod (setf ptr) (new (dyn elf-dyn))
   (if (equal :ptr (un-type dyn))
       (setf (un dyn) (coerce (int-to-bytes new 4) 'vector))
       (error "Can't set ptr for dynamic section of type ~a" (tag dyn))))
@@ -399,7 +399,7 @@
 (defmethod val ((dyn elf-dyn))
   (when (equal (un-type dyn) :val) (bytes-to-int (un dyn) 'signed)))
 
-(defmethod (setf val) (new (dyn elf-dyn) &aux steps)
+(defmethod (setf val) (new (dyn elf-dyn))
   (if (equal :val (un-type dyn))
       (setf (un dyn) (coerce (int-to-bytes new 4 'signed) 'vector))
       (error "Can't set val for dynamic section of type ~a" (tag dyn))))
@@ -515,8 +515,7 @@ section (in the file)."
                               (loop for x from 0 to (1- (ph-num header))
                                  collect (read-value 'program-header in))))
        sections
-       (let ((str-off (offset (nth (sh-str-ind header) section-table)))
-             (path (pathname in)))
+       (let ((str-off (offset (nth (sh-str-ind header) section-table))))
          (mapcar
           (lambda (h)
             (let ((section (make-instance 'section)))
@@ -639,13 +638,15 @@ section (in the file)."
                              (setf chunk (subseq chunk d))
                              (setf d 0))))
                  ((equal :program-table chunk) ; program header
-                  (setf (phoff header) (+ (phoff header) d))
-                  (setf last (+ (phoff header)
-                                (* (ph-num header) (ph-ent-size header)))))
+                  (let ((header (header (elf sec))))
+                    (setf (phoff header) (+ (phoff header) d))
+                    (setf last (+ (phoff header)
+                                  (* (ph-num header) (ph-ent-size header))))))
                  ((equal :section-table chunk) ; section header
-                  (setf (shoff header) (+ (shoff header) d))
-                  (setf last (+ (shoff header)
-                                (* (sh-num header) (sh-ent-size header))))))))
+                  (let ((header (header (elf sec))))
+                    (setf (shoff header) (+ (shoff header) d))
+                    (setf last (+ (shoff header)
+                                  (* (sh-num header) (sh-ent-size header)))))))))
          chunk)
        (ordering (elf sec)))))
     ;; update the dynamic symbols used at run time
@@ -733,7 +734,8 @@ section (in the file)."
                    ((eq :section-table el)
                     (* (sh-ent-size (header elf)) (sh-num (header elf))))
                    ((eq :program-table el)
-                    (* (ph-ent-size (header elf)) (ph-num (header elf))))))))
+                    (* (ph-ent-size (header elf)) (ph-num (header elf))))
+                   (t (error "~&unknown ordering element:~a" el))))))
    (ordering elf) :initial-value 0))
 
 (defun show-memory-layout (elf)
