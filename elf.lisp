@@ -24,12 +24,10 @@
 
 ;;; Code:
 (in-package #:cl-user)
-;; uses quicklisp for dependencies -- http://www.quicklisp.org/ 
-(ql:quickload :com.gigamonkeys.binary-data)
-(ql:quickload :cl-ppcre)
-(ql:quickload :metabang-bind)
+(require 'com.gigamonkeys.binary-data)
+(require 'metabang-bind)
 (defpackage #:elf
-  (:use :common-lisp :com.gigamonkeys.binary-data :cl-ppcre :metabang-bind)
+  (:use :common-lisp :com.gigamonkeys.binary-data :metabang-bind)
   (:export
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
@@ -170,18 +168,6 @@
                             (car (rassoc val ',dictionary))) ,sign))))
 
 ;; integers and bytes
-(defun parse-addr (str)
-  (let ((clean (cond
-                 ((and (> (length str) 2)
-                       (string= (subseq str 0 2) "0x"))
-                  (subseq str 2))
-                 ((and (> (length str) 3)
-                       (string= (subseq str 1 3) "0x"))
-                  (subseq str 3))
-                 (t str))))
-    (when (scan "^[0-9a-f]+$" clean)
-      (parse-integer clean :radix 16))))
-
 (defvar *endian* 'little
   "Controls the endianness of how bytes are read.")
 

@@ -23,7 +23,7 @@
 
 ;;; Code:
 (in-package #:cl-user)
-(ql:quickload :stefil)
+(require 'stefil)
 (load "elf.lisp")
 (in-package #:elf)
 
