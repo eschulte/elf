@@ -34,7 +34,7 @@
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
-   :mapslots :generic-copy
+   :mapslots :generic-copy :copy-elf
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
@@ -51,6 +51,10 @@
 
 
 ;;; Utility functions
+(defun indexed (sequence)
+  (loop for el in sequence as n from 0
+     collect (list n el)))
+
 (defun my-slot-definition-name (el)
   #+sbcl
   (sb-mop::slot-definition-name el)
@@ -70,16 +74,15 @@
                   (my-class-slots (class-of obj)))))
 
 (defun generic-copy (obj &optional trace)
-  "A generic copy method."
+  "A generic copy method, may run way too long on partially circular elements."
   (let ((trace1 (concatenate 'list (list obj) trace)))
     (cond
-      ((member obj trace) obj)
+      ((or (numberp obj) (symbolp obj)) obj)
       ((stringp obj) (copy-seq obj))
+      ((member obj trace) obj)      ; don't follow circular structures
       ((or (listp obj) (vectorp obj))
        (coerce (mapcar (lambda (el) (generic-copy el trace1)) (coerce obj 'list))
                (cond ((listp obj) 'list) ((vectorp obj) 'vector))))
-      ((numberp obj) obj)
-      ((symbolp obj) obj)
       ((my-class-slots (class-of obj))
        (let ((new (make-instance (class-name (class-of obj)))))
          (mapslots
@@ -88,6 +91,38 @@
           obj)
          new))
       (t (error "~&don't know how to copy ~a" obj)))))
+
+(defun copy-elf (elf)
+  (unless (eql 'elf (class-name (class-of elf)))
+    (error "~&`copy-elf' called on non-elf object: ~a" elf))
+  (let ((e (make-instance 'elf)))
+    (with-slots (header section-table program-table sections ordering) e
+      (setf
+       header (generic-copy (header elf))
+       section-table (generic-copy (section-table elf))
+       program-table (generic-copy (program-table elf))
+       sections
+       (let ((ish (indexed (section-table elf)))
+             (iph (indexed (program-table elf))))
+         (flet ((copy-between-tables (hd i-tab to-tab)
+                  (when hd
+                    (let ((ind (caar (member-if (lambda (ih) (equal hd (cadr ih)))
+                                                i-tab))))
+                      (unless ind (error "~&header:~a not in table:~a" hd i-tab))
+                      (nth ind to-tab)))))
+           (mapcar
+            (lambda (sec)
+              (let ((s (make-instance 'section)))
+                (with-slots (elf sh ph name data) s
+                  (setf elf e
+                        sh (copy-between-tables (sh sec) ish section-table)
+                        ph (copy-between-tables (ph sec) iph program-table)
+                        name (name sec)
+                        data (copy-seq (data sec)))
+                  s)))
+            (sections elf))))
+       ordering (generic-copy (ordering elf))))
+    e))
 
 
 ;;; Basic Binary types
