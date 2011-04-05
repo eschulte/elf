@@ -40,8 +40,8 @@ Optional argument OUT specifies an output stream."
    (lambda (slot)
      (let ((val (slot-value hd slot)))
        (format (or out t) "~s:~a " slot val)))
-   (mapcar #'clos::slot-definition-name
-           (clos::class-slots (class-of hd)))))
+   (mapcar #'my-slot-definition-name
+           (my-class-slots (class-of hd)))))
 
 (defun equal-it (obj1 obj2 &optional trace)
   "Equal over objects and lists."
@@ -56,12 +56,12 @@ Optional argument OUT specifies an output stream."
                         (mapcar #'cons (coerce obj1 'list) (coerce obj2 'list))
                         (mapcar #'cons obj1 obj2))
                     :initial-value t)))
-      ((clos::class-slots (class-of obj1))
+      ((my-class-slots (class-of obj1))
        (reduce (lambda (acc slot)
                  (and acc (equal-it (slot-value obj1 slot) (slot-value obj2 slot)
                                     trace1)))
-               (mapcar #'clos::slot-definition-name
-                       (clos::class-slots (class-of obj1)))
+               (mapcar #'my-slot-definition-name
+                       (my-class-slots (class-of obj1)))
                :initial-value t))
       (t (equal obj1 obj2)))))
 
@@ -81,14 +81,14 @@ Optional argument OUT specifies an output stream."
                          (mapcar #'list (coerce obj1 'list) (coerce obj2 'list))
                          (mapcar #'list obj1 obj2)))
                     :initial-value t)))
-      ((clos::class-slots (class-of obj1))
+      ((my-class-slots (class-of obj1))
        (reduce (lambda (acc slot)
                  (and acc (or (different-it
                                (slot-value obj1 slot) (slot-value obj2 slot)
                                trace1)
                               (format t "~&  ~a" slot))))
-               (mapcar #'clos::slot-definition-name
-                       (clos::class-slots (class-of obj1)))
+               (mapcar #'my-slot-definition-name
+                       (my-class-slots (class-of obj1)))
                :initial-value t))
       (t (or (equal obj1 obj2) (format t "~&~a!=~a" obj1 obj2))))))
 

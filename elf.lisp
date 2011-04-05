@@ -46,26 +46,28 @@
 (in-package #:elf)
 
 ;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
+#+clisp
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 
 
 ;;; Utility functions
-(defun shell (cmd &rest args)
-  (let ((stdout (apply #+clisp
-                       #'ext:run-program
-                       #-clisp
-                       (error "only implemented for clisp")
-                       (append (list cmd :output :stream)
-                               (when args (list :arguments args))))))
-    (loop for line = (read-line stdout nil)
-       until (not line)
-       collect line)))
+(defun my-slot-definition-name (el)
+  #+sbcl
+  (sb-mop::slot-definition-name el)
+  #-sbcl
+  (#'clos::slot-definition-name el))
+
+(defun my-class-slots (el)
+  #+sbcl
+  (sb-mop::class-slots el)
+  #-sbcl
+  (clos::class-slots el))
 
 (defun mapslots (func obj)
   "Map func over the slots of the clos object OBJ."
   (mapcar func
-          (mapcar #'clos::slot-definition-name
-                  (clos::class-slots (class-of obj)))))
+          (mapcar #'my-slot-definition-name
+                  (my-class-slots (class-of obj)))))
 
 (defun generic-copy (obj &optional trace)
   "A generic copy method."
@@ -78,7 +80,7 @@
                (cond ((listp obj) 'list) ((vectorp obj) 'vector))))
       ((numberp obj) obj)
       ((symbolp obj) obj)
-      ((clos::class-slots (class-of obj))
+      ((my-class-slots (class-of obj))
        (let ((new (make-instance (class-name (class-of obj)))))
          (mapslots
           (lambda (slot) (setf (slot-value new slot)
@@ -640,8 +642,6 @@ section (in the file)."
 (defun write-elf (elf file)
   (with-open-file (out file :direction :output :element-type '(unsigned-byte 8))
     (write-value 'elf out elf))
-  (when (equal :executable (type (header elf)))
-    (shell "chmod" "+x" file))
   nil)
 
 (defun show-dynamic (elf)
