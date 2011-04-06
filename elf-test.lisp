@@ -23,8 +23,8 @@
 
 ;;; Code:
 (in-package #:cl-user)
+(require 'elf)
 (require 'stefil)
-(load "elf.lisp")
 (in-package #:elf)
 
 (stefil:defsuite elf-test)

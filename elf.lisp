@@ -24,8 +24,6 @@
 
 ;;; Code:
 (in-package #:cl-user)
-(require 'com.gigamonkeys.binary-data)
-(require 'metabang-bind)
 (defpackage #:elf
   (:use :common-lisp :com.gigamonkeys.binary-data :metabang-bind)
   (:export
