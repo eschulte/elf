@@ -24,6 +24,11 @@
 
 ;;; Code:
 (in-package #:cl-user)
+;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
+#+clisp
+(when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
+#+sbcl
+(unlock-package :common-lisp)
 (defpackage #:elf
   (:use :common-lisp :com.gigamonkeys.binary-data :metabang-bind)
   (:export
@@ -40,10 +45,6 @@
    ;; elf class
    :header :section-table :program-table :sections :ordering))
 (in-package #:elf)
-
-;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
-#+clisp
-(when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 
 
 ;;; Utility functions
