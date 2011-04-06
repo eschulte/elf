@@ -4,8 +4,9 @@
 #+STYLE: <link rel="stylesheet" href="/~eschulte/stylesheet.css" type="text/css">
 
 * ELF
-[[http://gitweb.adaptive.cs.unm.edu/cl-elf.git/blob_plain/HEAD:/elf.lisp][elf.lisp]] is a common lisp library for the manipulation of ELF files,
-which can be used to read, inspect, modify and write elf files.
+=elf.lisp= ([[http://gitweb.adaptive.cs.unm.edu/elf.git/blob_plain/HEAD:/elf.lisp][elf.lisp]], [[http://gitweb.adaptive.cs.unm.edu/elf.git][elf.git]]) is a common lisp library for the
+manipulation of ELF files, which can be used to read, inspect, modify
+and write elf files.
 
 See file:ELF.txt (in this directory) for more information on the elf
 format.  Much of the code in =elf.lisp= is a direct translation of the
