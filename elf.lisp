@@ -55,13 +55,17 @@
 (defun my-slot-definition-name (el)
   #+sbcl
   (sb-mop::slot-definition-name el)
-  #-sbcl
+  #+ccl
+  (slot-definition-name el)
+  #-(or sbcl ccl)
   (#'clos::slot-definition-name el))
 
 (defun my-class-slots (el)
   #+sbcl
   (sb-mop::class-slots el)
-  #-sbcl
+  #+ccl
+  (class-slots el)
+  #-(or sbcl ccl)
   (clos::class-slots el))
 
 (defun mapslots (func obj)
