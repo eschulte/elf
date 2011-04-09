@@ -5,6 +5,8 @@ hello3
 
 ## exported/compiled files
 *.fasl
+*.lx32fsl
+*.lx64fsl
 elf.html
 elf.pdf
 elf.tex

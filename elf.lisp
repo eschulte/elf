@@ -39,7 +39,8 @@
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
-   :address :link :info :addralign :entsize
+   :address :link :info :addralign :entsize :vaddr :paddr
+   :filesz :memsz :align
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
