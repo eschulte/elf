@@ -36,12 +36,12 @@
   "Print the fields of a elf, section or program header.
 Optional argument OUT specifies an output stream."
   (format (or out t) "~&")
-  (mapc
+  (mapcar
    (lambda (slot)
      (let ((val (slot-value hd slot)))
-       (format (or out t) "~s:~a " slot val)))
-   (mapcar #'my-slot-definition-name
-           (my-class-slots (class-of hd)))))
+       (format (or out t) "~s:~a " slot val)
+       (list slot val)))
+   (mapcar #'my-slot-definition-name (my-class-slots (class-of hd)))))
 
 (defun equal-it (obj1 obj2 &optional trace)
   "Equal over objects and lists."

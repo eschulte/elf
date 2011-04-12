@@ -127,24 +127,30 @@
            (write-sequence buf out)))
 
 ;; dictionaries
-(defmacro define-elf-dictionary (name num sign dictionary)
-  ; (declare (indent 3))
-  `(define-binary-type ,name ()
-     (:reader (in)
-              (let ((byte (bytes-from in ,num ,sign)))
-                (or (cdr (assoc byte ',dictionary)) byte)))
-     (:writer (out val)
-              (bytes-to out ,num
-                        (if (numberp val)
-                            val
-                            (car (rassoc val ',dictionary))) ,sign))))
+(defmacro define-elf-dictionary
+    (name num dictionary &key (signed nil) (class-dependent nil))
+  (let ((bytes (if class-dependent
+                   (case *class*
+                     (32 num)
+                     (64 (* 2 num))
+                     (t (error "class:~a is not either 32 or 64" *class*)))
+                   num)))
+    `(define-binary-type ,name ()
+       (:reader (in)
+                (let ((byte (bytes-from in ,bytes ,signed)))
+                  (or (cdr (assoc byte ',dictionary)) byte)))
+       (:writer (out val)
+                (bytes-to out ,bytes
+                          (if (numberp val)
+                              val
+                              (car (rassoc val ',dictionary))) ,signed)))))
 
 ;; integers and bytes
 (defvar *endian* 'little
   "Controls the endianness of how bytes are read.")
 
-(defvar *class* 32
-  "Register size of machine, (e.g. 32-bit or 64-bit).")
+(defvar *class* nil
+  "Word size of the machine, (e.g. 32-bit or 64-bit).")
 
 (defun bytes-to-int (bytes &optional signed-p &aux steps)
   (dotimes (n (length bytes)) (setf steps (cons (* n 8) steps)))
@@ -199,20 +205,19 @@
 (define-binary-type half   () (unsigned-integer :bytes 2))
 (define-binary-type word   () (unsigned-integer :bytes 4))
 (define-binary-type sword  () (signed-integer   :bytes 4))
-(define-binary-type xword  () (unsigned-integer :bytes 8))
-(define-binary-type sxword () (signed-integer   :bytes 8))
+(define-binary-type xword  () (class-dependent-unsigned-integer :bytes 4))
 (define-binary-type addr   () (class-dependent-unsigned-integer :bytes 4))
 (define-binary-type off    () (class-dependent-unsigned-integer :bytes 4))
 
 ;; ELF dictionaries -- ELF header
-(define-elf-dictionary elf-type 2 nil
+(define-elf-dictionary elf-type 2
                        ((0 . :none)
                         (1 . :relocatable)
                         (2 . :executable)
                         (3 . :shared-object)
                         (4 . :core)))
 
-(define-elf-dictionary elf-machine 2 nil
+(define-elf-dictionary elf-machine 2
                        ((0 . :no-machine)
                         (1 . :at&t-we-32100)
                         (2 . :sun-sparc)
@@ -222,14 +227,14 @@
                         (7 . :intel-80860)
                         (8 . :mips-r3000-big-endian)))
 
-(define-elf-dictionary elf-version 4 nil
+(define-elf-dictionary elf-version 4
                        ((0 . :invalid) (1 . :current)))
 
-(define-elf-dictionary elf-class 1 nil
+(define-elf-dictionary elf-class 1
                        ((0 . :invalid) (1 . :32-bit) (2 . :64-bit)))
 
 ;; section header table
-(define-elf-dictionary sh-type 4 nil
+(define-elf-dictionary sh-type 4
                        ((0 . :null)
                         (1 . :progbits)
                         (2 . :symtab)
@@ -243,13 +248,14 @@
                         (10 . :shlib)
                         (11 . :dynsym)))
 
-(define-elf-dictionary sh-flags 4 nil
+(define-elf-dictionary sh-flags 4
                        ((1 . :writable)
                         (2 . :allocatable)
-                        (4 . :executable)))
+                        (4 . :executable))
+                       :class-dependent t)
 
 ;; program header table
-(define-elf-dictionary ph-type 4 nil
+(define-elf-dictionary ph-type 4
                        ((0 . :null)
                         (1 . :load)
                         (2 . :dynamic)
@@ -264,7 +270,7 @@
                         (1879048187 . :sunwstack)))
 
 ;; .dynamic section tag
-(define-elf-dictionary dyn-tag 4 'signed
+(define-elf-dictionary dyn-tag 4
                        ((0  . :null)
                         (1  . :needed)
                         (2  . :pltrelsz)
@@ -288,7 +294,8 @@
                         (20 . :pltrel)
                         (21 . :debug)
                         (22 . :textrel)
-                        (23 . :jmprel)))
+                        (23 . :jmprel))
+                       :signed t)
 
 
 ;;; Classes, readers and writers
@@ -321,11 +328,11 @@
    (flags     sh-flags)
    (address   addr)
    (offset    off)
-   (size      word)
+   (size      xword)
    (link      word)
    (info      word)
-   (addralign word)
-   (entsize   word)))
+   (addralign xword)
+   (entsize   xword)))
 
 (define-binary-class program-header ()
   ((type   ph-type)
