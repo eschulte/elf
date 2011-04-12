@@ -335,6 +335,12 @@
    (sh-num        half)
    (sh-str-ind    half)))
 
+(defun elf-header-size ()
+  (case *class*
+    (:32-bit 52)
+    (:64-bit 64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
 (define-binary-class section-header ()
   ((name      word)
    (type      sh-type)
@@ -596,7 +602,7 @@ section (in the file)."
                          (read-value 'raw-bytes in :length size)))
                 (add-part (offset size contents)
                   (setf parts (cons (list offset size contents) parts))))
-           (add-part 0 52 :header)      ; add header
+           (add-part 0 (elf-header-size) :header)
            (add-part (shoff header)     ; add section-table
                      (* (sh-num header) (sh-ent-size header)) :section-table)
            (add-part (phoff header)     ; add program-table
@@ -813,7 +819,7 @@ section (in the file)."
                              (* (length (data sec)) (entsize (sh sec))))
                             (t (length (data sec))))))
                        ((vectorp el) (length el))
-                       ((eq :header el) 52)
+                       ((eq :header el) (elf-header-size))
                        ((eq :section-table el)
                         (* (sh-ent-size (header elf)) (sh-num (header elf))))
                        ((eq :program-table el)
