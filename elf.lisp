@@ -347,7 +347,7 @@
    (addralign xword)
    (entsize   xword)))
 
-(define-binary-class program-header ()
+(define-binary-class program-header-32 ()
   ((type   ph-type)
    (offset off)
    (vaddr  addr)
@@ -356,6 +356,16 @@
    (memsz  word)
    (flags  word)
    (align  word)))
+
+(define-binary-class program-header-64 ()
+  ((type   ph-type)
+   (flags  word)
+   (offset off)
+   (vaddr  addr)
+   (paddr  addr)
+   (filesz xword)
+   (memsz  xword)
+   (align  xword)))
 
 (define-binary-class elf-sym ()
   ((name  word)
@@ -493,6 +503,13 @@ section (in the file)."
                                                 (+ (offset ph) (filesz ph))))))
                           pt) (lambda (a b) (> (filesz a) (filesz b))))))
 
+(defun program-header-type ()
+  "Return the appropriate type of program header given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'program-header-32)
+    (:64-bit 'program-header-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
 (defmethod read-value ((type (eql 'elf)) in &key)
   "Read an elf object from a binary input stream."
   (let ((e (make-instance 'elf)))
@@ -507,7 +524,8 @@ section (in the file)."
        program-table (unless (zerop (phoff header))
                        (progn (file-position in (phoff header))
                               (loop for x from 0 to (1- (ph-num header))
-                                 collect (read-value 'program-header in))))
+                                 collect
+                                   (read-value (program-header-type) in))))
        sections
        (let ((str-off (offset (nth (sh-str-ind header) section-table))))
          (mapcar
@@ -594,7 +612,9 @@ section (in the file)."
           ((eq :section-table chunk)    ; section table
            (mapc (lambda (c) (write-value 'section-header out c)) section-table))
           ((eq :program-table chunk)    ; program table
-           (mapc (lambda (c) (write-value 'program-header out c)) program-table)))))))
+           (mapc (lambda (c)
+                   (write-value (program-header-type) out c))
+                 program-table)))))))
 
 (defun copy-elf (elf)
   (unless (eql 'elf (class-name (class-of elf)))
