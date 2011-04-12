@@ -143,6 +143,9 @@
 (defvar *endian* 'little
   "Controls the endianness of how bytes are read.")
 
+(defvar *class* 32
+  "Register size of machine, (e.g. 32-bit or 64-bit).")
+
 (defun bytes-to-int (bytes &optional signed-p &aux steps)
   (dotimes (n (length bytes)) (setf steps (cons (* n 8) steps)))
   (unless (listp bytes) (setf bytes (coerce bytes 'list)))
@@ -180,16 +183,26 @@
   (:reader (in) (bytes-from in bytes 'signed))
   (:writer (out value) (bytes-to out bytes value 'signed)))
 
-(define-binary-type char    () (unsigned-integer :bytes 1))
-(define-binary-type half    () (unsigned-integer :bytes 2))
-(define-binary-type word    () (unsigned-integer :bytes 4))
-(define-binary-type sword   () (signed-integer   :bytes 4))
-(define-binary-type xword   () (unsigned-integer :bytes 8))
-(define-binary-type sxword  () (signed-integer   :bytes 8))
-(define-binary-type 32-addr () (unsigned-integer :bytes 4))
-(define-binary-type 32-off  () (unsigned-integer :bytes 4))
-(define-binary-type 64-addr () (unsigned-integer :bytes 8))
-(define-binary-type 64-off  () (unsigned-integer :bytes 8))
+(define-binary-type class-dependent-unsigned-integer (bytes)
+  (:reader (in)
+           (case *class*
+             (32 (bytes-from in bytes))
+             (64 (bytes-from in (* 2 bytes)))
+             (otherwise (error "class:~a is not either 32 or 64" *class*))))
+  (:writer (out value)
+           (case *class*
+             (32 (bytes-to out bytes value))
+             (64 (bytes-to out (* 2 bytes) value))
+             (otherwise (error "class:~a is not either 32 or 64" *class*)))))
+
+(define-binary-type char   () (unsigned-integer :bytes 1))
+(define-binary-type half   () (unsigned-integer :bytes 2))
+(define-binary-type word   () (unsigned-integer :bytes 4))
+(define-binary-type sword  () (signed-integer   :bytes 4))
+(define-binary-type xword  () (unsigned-integer :bytes 8))
+(define-binary-type sxword () (signed-integer   :bytes 8))
+(define-binary-type addr   () (class-dependent-unsigned-integer :bytes 4))
+(define-binary-type off    () (class-dependent-unsigned-integer :bytes 4))
 
 ;; ELF dictionaries -- ELF header
 (define-elf-dictionary elf-type 2 nil
@@ -291,9 +304,9 @@
    (type          elf-type)
    (machine       elf-machine)
    (version       elf-version)
-   (entry         32-addr)
-   (phoff         32-off)
-   (shoff         32-off)
+   (entry         addr)
+   (phoff         off)
+   (shoff         off)
    (flags         word)
    (eh-size       half)
    (ph-ent-size   half)
@@ -306,8 +319,8 @@
   ((name      word)
    (type      sh-type)
    (flags     sh-flags)
-   (address   32-addr)
-   (offset    32-off)
+   (address   addr)
+   (offset    off)
    (size      word)
    (link      word)
    (info      word)
@@ -316,9 +329,9 @@
 
 (define-binary-class program-header ()
   ((type   ph-type)
-   (offset 32-off)
-   (vaddr  32-addr)
-   (paddr  32-addr)
+   (offset off)
+   (vaddr  addr)
+   (paddr  addr)
    (filesz word)
    (memsz  word)
    (flags  word)
@@ -326,7 +339,7 @@
 
 (define-binary-class elf-sym ()
   ((name  word)
-   (value 32-addr)
+   (value addr)
    (size  word)
    (info  char)
    (other char)
