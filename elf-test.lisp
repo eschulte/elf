@@ -102,6 +102,7 @@ Optional argument OUT specifies an output stream."
 
 
 ;;; testing components
+(defvar *test-class* :32-bit "architecture to test (e.g. 32-bit or 64-bit)")
 (defvar *tmp-file* nil "temporary file used for testing")
 (defvar *elf* nil "variable to hold elf object")
 
@@ -109,7 +110,7 @@ Optional argument OUT specifies an output stream."
   (:setup
    (setf *tmp-file* "./hello.tmp")
    (when (probe-file *tmp-file*) (delete-file *tmp-file*))
-   (setf *elf* (read-elf "hello")))
+   (setf *elf* (read-elf (case *test-class* (:32-bit "hello32") (:64-bit "hello64")))))
   (:teardown
    (when (probe-file *tmp-file*)
      (delete-file *tmp-file*))))
@@ -122,6 +123,10 @@ Optional argument OUT specifies an output stream."
     (stefil:is (setf out (read-elf path)))
     out))
 
+(defun run-elf-tests ()
+  (let ((*test-class* :32-bit)) (elf-test))
+  (let ((*test-class* :64-bit)) (elf-test)))
+
 
 ;;; tests which run
 (stefil:deftest test-magic-number ()
@@ -131,7 +136,7 @@ Optional argument OUT specifies an output stream."
 
 (stefil:deftest test-idempotent-read-write ()
   (stefil:with-fixture hello-elf
-    (stefil:is (equal :32-bit *class*))
+    (stefil:is (equal *test-class* *class*))
     (test-write-elf *elf* *tmp-file*)
     (stefil:is (equal-it *elf* (test-read-elf *tmp-file*)))))
 
