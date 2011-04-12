@@ -308,7 +308,7 @@
                         (21 . :debug)
                         (22 . :textrel)
                         (23 . :jmprel))
-                       :signed t)
+                       :signed t :class-dependent t)
 
 
 ;;; Classes, readers and writers
@@ -374,6 +374,8 @@
     (:64-bit 'program-header-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+(defclass elf-sym () ())
+
 (define-binary-class elf-sym-32 (elf-sym)
   ((name  word)
    (value addr)
@@ -397,9 +399,25 @@
     (:64-bit 'elf-sym-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
-(define-binary-class elf-dyn ()
+(defclass elf-dyn () ())
+
+(define-binary-class elf-dyn-32 (elf-dyn)
   ((tag dyn-tag)
    (un (raw-bytes :length 4))))
+
+(define-binary-class elf-dyn-64 (elf-dyn)
+  ((tag dyn-tag)
+   (un (raw-bytes :length 8))))
+
+(defun elf-dyn-type ()
+  "Return the appropriate type of dynamic symbol given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'elf-dyn-32)
+    (:64-bit 'elf-dyn-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
+(defmethod word-size ((dyn elf-dyn-32)) 4)
+(defmethod word-size ((dyn elf-dyn-64)) 8)
 
 (defmethod un-type ((dyn elf-dyn))
   (let ((val (list :pltrel :relent :relsz :rpath :soname :syment
@@ -416,7 +434,7 @@
 
 (defmethod (setf ptr) (new (dyn elf-dyn))
   (if (equal :ptr (un-type dyn))
-      (setf (un dyn) (coerce (int-to-bytes new 4) 'vector))
+      (setf (un dyn) (coerce (int-to-bytes new (word-size dyn)) 'vector))
       (error "Can't set ptr for dynamic section of type ~a" (tag dyn))))
 
 (defmethod val ((dyn elf-dyn))
@@ -424,7 +442,8 @@
 
 (defmethod (setf val) (new (dyn elf-dyn))
   (if (equal :val (un-type dyn))
-      (setf (un dyn) (coerce (int-to-bytes new 4 'signed) 'vector))
+      (setf (un dyn) (coerce (int-to-bytes
+                              new (word-size dyn) 'signed) 'vector))
       (error "Can't set val for dynamic section of type ~a" (tag dyn))))
 
 (defun dynamic-entry (sec)
@@ -561,7 +580,7 @@ section (in the file)."
                         ((string= ".dynamic" name)
                          (file-position in (offset sh))
                          (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                            collect (read-value 'elf-dyn in)))
+                            collect (read-value (elf-dyn-type) in)))
                         (t
                          (file-position in (offset h))
                          (read-value 'raw-bytes in :length (size section))))))
@@ -618,7 +637,7 @@ section (in the file)."
                   (dolist (sym (data sec)) (write-value (elf-sym-type) out sym)))
                  ((string= ".dynamic" (name sec))
                   (dolist (dyn (data sec))
-                    (write-value 'elf-dyn out dyn)))
+                    (write-value (elf-dyn-type) out dyn)))
                  (t (write-bytes (data sec)))))))
           ((vectorp chunk)              ; raw filler
            (write-bytes chunk))
