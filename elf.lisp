@@ -29,6 +29,8 @@
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 #+sbcl
 (unlock-package :common-lisp)
+(require 'com.gigamonkeys.binary-data)
+(require 'metabang-bind)
 (defpackage #:elf
   (:use :common-lisp :com.gigamonkeys.binary-data :metabang-bind)
   (:export
@@ -129,18 +131,18 @@
 ;; dictionaries
 (defmacro define-elf-dictionary
     (name num dictionary &key (signed nil) (class-dependent nil))
-  (let ((bytes (if class-dependent
-                   (case *class*
-                     (32 num)
-                     (64 (* 2 num))
-                     (t (error "class:~a is not either 32 or 64" *class*)))
-                   num)))
+  (let ((byte-form `(if ,class-dependent
+                        (case *class*
+                          (:32-bit ,num)
+                          (:64-bit ,(* 2 num))
+                          (t (error 'bad-elf-class :class *class*)))
+                        ,num)))
     `(define-binary-type ,name ()
        (:reader (in)
-                (let ((byte (bytes-from in ,bytes ,signed)))
+                (let ((byte (bytes-from in ,byte-form ,signed)))
                   (or (cdr (assoc byte ',dictionary)) byte)))
        (:writer (out val)
-                (bytes-to out ,bytes
+                (bytes-to out ,byte-form
                           (if (numberp val)
                               val
                               (car (rassoc val ',dictionary))) ,signed)))))
@@ -150,7 +152,10 @@
   "Controls the endianness of how bytes are read.")
 
 (defvar *class* nil
-  "Word size of the machine, (e.g. 32-bit or 64-bit).")
+  "Word size of the machine, (e.g. :32-bit or :64-bit).")
+
+(define-condition bad-elf-class (error)
+  ((class :initarg :class :reader class)))
 
 (defun bytes-to-int (bytes &optional signed-p &aux steps)
   (dotimes (n (length bytes)) (setf steps (cons (* n 8) steps)))
@@ -192,14 +197,14 @@
 (define-binary-type class-dependent-unsigned-integer (bytes)
   (:reader (in)
            (case *class*
-             (32 (bytes-from in bytes))
-             (64 (bytes-from in (* 2 bytes)))
-             (otherwise (error "class:~a is not either 32 or 64" *class*))))
+             (:32-bit (bytes-from in bytes))
+             (:64-bit (bytes-from in (* 2 bytes)))
+             (t (error 'bad-elf-class :class *class*))))
   (:writer (out value)
            (case *class*
              (32 (bytes-to out bytes value))
              (64 (bytes-to out (* 2 bytes) value))
-             (otherwise (error "class:~a is not either 32 or 64" *class*)))))
+             (otherwise (error 'bad-elf-class :class *class*)))))
 
 (define-binary-type char   () (unsigned-integer :bytes 1))
 (define-binary-type half   () (unsigned-integer :bytes 2))
@@ -230,8 +235,16 @@
 (define-elf-dictionary elf-version 4
                        ((0 . :invalid) (1 . :current)))
 
-(define-elf-dictionary elf-class 1
-                       ((0 . :invalid) (1 . :32-bit) (2 . :64-bit)))
+(let ((dictionary '((0 . :invalid) (1 . :32-bit) (2 . :64-bit))))
+  ;; this special dictionary will set the value of the *class* special
+  ;; variable as it reads the file class from the elf header
+  (define-binary-type elf-class ()
+    (:reader (in)
+             (let ((byte (bytes-from in 1)))
+               (setf *class* (or (cdr (assoc byte dictionary)) byte))))
+    (:writer (out val)
+             (let ((value (if (numberp val) val (car (rassoc val dictionary)))))
+               (bytes-to out 1 value)))))
 
 ;; section header table
 (define-elf-dictionary sh-type 4
@@ -427,6 +440,7 @@
   (when (ph sec) (+ (vaddr (ph sec)) (- (offset sec) (offset (ph sec))))))
 
 (defmethod (setf vma) (new (sec section))
+  (declare (ignorable new))
   (error "Don't set the VMA, this is calculated from the ph and offset."))
 
 (defmethod size ((sec section))
@@ -451,12 +465,14 @@
   (flags (concatenate 'list (ph sec) (sh sec))))
 
 (defmethod (setf flags) (new (sec section))
+  (declare (ignorable new))
   (error "TODO: setting flags not yet implemented"))
 
 (defmethod alignment ((sec section))
   (if (ph sec) (align (ph sec)) (addralign (sh sec))))
 
 (defmethod (setf alignment) (new (sec section))
+  (declare (ignorable new))
   (error "TODO: setting alignment is not yet implemented"))
 
 (defclass elf ()

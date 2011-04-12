@@ -25,7 +25,11 @@
 (in-package #:cl-user)
 (require 'elf)
 (require 'stefil)
+(require 'alexandria)
+(require 'trivial-shell)
 (in-package #:elf)
+(use-package 'alexandria)
+(use-package 'trivial-shell)
 
 (stefil:defsuite elf-test)
 (stefil:in-suite elf-test)
@@ -69,18 +73,22 @@ Optional argument OUT specifies an output stream."
   (let ((trace1 (concatenate 'list (list obj1 obj2) trace)))
     (cond
       ((or (member obj1 trace) (member obj2 trace)) t)
-      ((or (and (listp obj1) (listp obj2)) (and (vectorp obj1) (vectorp obj2)))
+      ((or (and (vectorp obj1) (vectorp obj2))
+           (and (proper-list-p obj1) (proper-list-p obj2)))
        (and (or (equal (length obj1) (length obj2))
-                (format t "~&different lengths ~a!=~a"))
-            (reduce (lambda (acc trio)
-                      (destructuring-bind (i (a b)) trio
-                        (and acc (or (different-it a b trace1)
-                                     (format t "~& at ~d ~a!=~a" i a b)))))
+                (format t "~&different lengths ~a!=~a"
+                        (length obj1) (length obj2)))
+            (reduce (lambda-bind (acc (i (a b)))
+                      (and acc (or (different-it a b trace1)
+                                   (format t "~& at ~d ~a!=~a" i a b))))
                     (indexed
                      (if (vectorp obj1)
                          (mapcar #'list (coerce obj1 'list) (coerce obj2 'list))
                          (mapcar #'list obj1 obj2)))
                     :initial-value t)))
+      ((and (consp obj1) (consp obj2))
+       (and (different-it (car obj1) (car obj2))
+            (different-it (cdr obj1) (cdr obj2))))
       ((my-class-slots (class-of obj1))
        (reduce (lambda (acc slot)
                  (and acc (or (different-it
@@ -94,16 +102,24 @@ Optional argument OUT specifies an output stream."
 
 
 ;;; testing components
+(defvar *tmp-file* nil "temporary file used for testing")
+(defvar *elf* nil "variable to hold elf object")
+
 (stefil:defixture hello-elf
   (:setup
-   (setf tmp-file "./hello.tmp")
-   (setf elf (read-elf "copy/hello")))
+   (setf *tmp-file* "./hello.tmp")
+   (when (probe-file *tmp-file*) (delete-file *tmp-file*))
+   (setf *elf* (read-elf "hello")))
   (:teardown
-   (when (probe-file tmp-file)
-     (delete-file tmp-file))))
+   (when (probe-file *tmp-file*)
+     (delete-file *tmp-file*))))
 
 (stefil:deftest test-write-elf (elf path)
-  (stefil:is (progn (write-elf elf path) (probe-file path))))
+  (format t "~&writing out elf~a class ~a~%" elf *class*)
+  (stefil:is (progn
+               (write-elf elf path)
+               (format t "~&wrote, now checking~%")
+               (probe-file path))))
 
 (stefil:deftest test-read-elf (path)
   (let (out)
@@ -115,23 +131,24 @@ Optional argument OUT specifies an output stream."
 (stefil:deftest test-magic-number ()
   (stefil:with-fixture hello-elf
     (let ((magic-number (concatenate 'string (string (code-char #x7f)) "ELF")))
-      (stefil:is (equal magic-number (magic-number (header elf)))))))
+      (stefil:is (equal magic-number (magic-number (header *elf*)))))))
 
 (stefil:deftest test-idempotent-read-write ()
   (stefil:with-fixture hello-elf
-    (test-write-elf elf tmp-file)
-    (stefil:is (equal-it elf (test-read-elf tmp-file)))))
+    (stefil:is (equal :32-bit *class*))
+    (test-write-elf *elf* *tmp-file*)
+    (stefil:is (equal-it *elf* (test-read-elf *tmp-file*)))))
 
 (stefil:deftest test-write-working-executable ()
   (stefil:with-fixture hello-elf
-    (test-write-elf elf tmp-file)
-    (stefil:is (equal "hello world" (car (shell tmp-file))))))
+    (test-write-elf *elf* *tmp-file*)
+    (stefil:is (equal "hello world" (car (shell-command *tmp-file*))))))
 
 (stefil:deftest test-tweaked-text-working-executable ()
   (stefil:with-fixture hello-elf
     ;; change a `noop' which is not on the execution path to a `ret'
-    (setf (aref (data (named-section elf ".text")) 42) #xc3)
-    (test-write-elf elf tmp-file)
-    (stefil:is (equal "hello world" (car (shell tmp-file))))))
+    (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
+    (test-write-elf *elf* *tmp-file*)
+    (stefil:is (equal "hello world" (car (shell-command *tmp-file*))))))
 
 ;;; elf-test.lisp ends here
