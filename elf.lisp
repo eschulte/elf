@@ -202,8 +202,8 @@
              (t (error 'bad-elf-class :class *class*))))
   (:writer (out value)
            (case *class*
-             (32 (bytes-to out bytes value))
-             (64 (bytes-to out (* 2 bytes) value))
+             (:32-bit (bytes-to out bytes value))
+             (:64-bit (bytes-to out (* 2 bytes) value))
              (otherwise (error 'bad-elf-class :class *class*)))))
 
 (define-binary-type char   () (unsigned-integer :bytes 1))

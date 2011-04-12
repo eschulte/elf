@@ -115,11 +115,7 @@ Optional argument OUT specifies an output stream."
      (delete-file *tmp-file*))))
 
 (stefil:deftest test-write-elf (elf path)
-  (format t "~&writing out elf~a class ~a~%" elf *class*)
-  (stefil:is (progn
-               (write-elf elf path)
-               (format t "~&wrote, now checking~%")
-               (probe-file path))))
+  (stefil:is (progn (write-elf elf path) (probe-file path))))
 
 (stefil:deftest test-read-elf (path)
   (let (out)
@@ -142,13 +138,21 @@ Optional argument OUT specifies an output stream."
 (stefil:deftest test-write-working-executable ()
   (stefil:with-fixture hello-elf
     (test-write-elf *elf* *tmp-file*)
-    (stefil:is (equal "hello world" (car (shell-command *tmp-file*))))))
+    (stefil:is (probe-file *tmp-file*))
+    (stefil:is #+ccl t ;; can't run this shell in ccl
+               #-ccl (progn
+                       (shell-command (format "chmod +x ~a" *tmp-file*))
+                       (equal "hello world" (car (shell-command *tmp-file*)))))))
 
 (stefil:deftest test-tweaked-text-working-executable ()
   (stefil:with-fixture hello-elf
     ;; change a `noop' which is not on the execution path to a `ret'
     (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
     (test-write-elf *elf* *tmp-file*)
-    (stefil:is (equal "hello world" (car (shell-command *tmp-file*))))))
+    (stefil:is (probe-file *tmp-file*))
+    (stefil:is #+ccl t ;; can't run this shell in ccl
+               #-ccl (progn
+                       (shell-command (format "chmod +x ~a" *tmp-file*))
+                       (equal "hello world" (car (shell-command *tmp-file*)))))))
 
 ;;; elf-test.lisp ends here
