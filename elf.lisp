@@ -94,38 +94,6 @@
          new))
       (t (error "~&don't know how to copy ~a" obj)))))
 
-(defun copy-elf (elf)
-  (unless (eql 'elf (class-name (class-of elf)))
-    (error "~&`copy-elf' called on non-elf object: ~a" elf))
-  (let ((e (make-instance 'elf)))
-    (with-slots (header section-table program-table sections ordering) e
-      (setf
-       header (generic-copy (header elf))
-       section-table (generic-copy (section-table elf))
-       program-table (generic-copy (program-table elf))
-       sections
-       (let ((ish (indexed (section-table elf)))
-             (iph (indexed (program-table elf))))
-         (flet ((copy-between-tables (hd i-tab to-tab)
-                  (when hd
-                    (let ((ind (caar (member-if (lambda (ih) (equal hd (cadr ih)))
-                                                i-tab))))
-                      (unless ind (error "~&header:~a not in table:~a" hd i-tab))
-                      (nth ind to-tab)))))
-           (mapcar
-            (lambda (sec)
-              (let ((s (make-instance 'section)))
-                (with-slots (elf sh ph name data) s
-                  (setf elf e
-                        sh (copy-between-tables (sh sec) ish section-table)
-                        ph (copy-between-tables (ph sec) iph program-table)
-                        name (name sec)
-                        data (copy-seq (data sec)))
-                  s)))
-            (sections elf))))
-       ordering (generic-copy (ordering elf))))
-    e))
-
 
 ;;; Basic Binary types
 ;; strings
@@ -591,6 +559,38 @@ section (in the file)."
            (mapc (lambda (c) (write-value 'section-header out c)) section-table))
           ((eq :program-table chunk)    ; program table
            (mapc (lambda (c) (write-value 'program-header out c)) program-table)))))))
+
+(defun copy-elf (elf)
+  (unless (eql 'elf (class-name (class-of elf)))
+    (error "~&`copy-elf' called on non-elf object: ~a" elf))
+  (let ((e (make-instance 'elf)))
+    (with-slots (header section-table program-table sections ordering) e
+      (setf
+       header (generic-copy (header elf))
+       section-table (generic-copy (section-table elf))
+       program-table (generic-copy (program-table elf))
+       sections
+       (let ((ish (indexed (section-table elf)))
+             (iph (indexed (program-table elf))))
+         (flet ((copy-between-tables (hd i-tab to-tab)
+                  (when hd
+                    (let ((ind (caar (member-if (lambda (ih) (equal hd (cadr ih)))
+                                                i-tab))))
+                      (unless ind (error "~&header:~a not in table:~a" hd i-tab))
+                      (nth ind to-tab)))))
+           (mapcar
+            (lambda (sec)
+              (let ((s (make-instance 'section)))
+                (with-slots (elf sh ph name data) s
+                  (setf elf e
+                        sh (copy-between-tables (sh sec) ish section-table)
+                        ph (copy-between-tables (ph sec) iph program-table)
+                        name (name sec)
+                        data (copy-seq (data sec)))
+                  s)))
+            (sections elf))))
+       ordering (generic-copy (ordering elf))))
+    e))
 
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
