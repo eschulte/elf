@@ -134,6 +134,15 @@ Optional argument OUT specifies an output stream."
     (let ((magic-number (concatenate 'string (string (code-char #x7f)) "ELF")))
       (stefil:is (equal magic-number (magic-number (header *elf*)))))))
 
+(stefil:deftest test-section-sizes ()
+  (stefil:with-fixture hello-elf
+    (dolist (sec (sections *elf*))
+      (unless (member (name sec) '(".dynsym" ".dynamic" ".symtab")
+                      :test #'string=)
+        (stefil:is (= (size (sh sec)) (length (data sec)))
+                   "section:~a data:~a != size:~a"
+                   (name sec) (length (data sec)) (size (sh sec)))))))
+
 (stefil:deftest test-idempotent-read-write ()
   (stefil:with-fixture hello-elf
     (stefil:is (equal *test-class* *class*))

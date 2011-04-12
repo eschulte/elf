@@ -11,3 +11,6 @@ hello.out
 elf.html
 elf.pdf
 elf.tex
+
+## scratch buffer
+scratch.lisp

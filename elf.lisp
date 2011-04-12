@@ -367,13 +367,35 @@
    (memsz  xword)
    (align  xword)))
 
-(define-binary-class elf-sym ()
+(defun program-header-type ()
+  "Return the appropriate type of program header given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'program-header-32)
+    (:64-bit 'program-header-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
+(define-binary-class elf-sym-32 (elf-sym)
   ((name  word)
    (value addr)
    (size  word)
    (info  char)
    (other char)
    (shndx half)))
+
+(define-binary-class elf-sym-64 (elf-sym)
+  ((name  word)
+   (info  char)
+   (other char)
+   (shndx half)
+   (value addr)
+   (size  xword)))
+
+(defun elf-sym-type ()
+  "Return the appropriate type of elf symbol given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'elf-sym-32)
+    (:64-bit 'elf-sym-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
 
 (define-binary-class elf-dyn ()
   ((tag dyn-tag)
@@ -503,13 +525,6 @@ section (in the file)."
                                                 (+ (offset ph) (filesz ph))))))
                           pt) (lambda (a b) (> (filesz a) (filesz b))))))
 
-(defun program-header-type ()
-  "Return the appropriate type of program header given the value of *CLASS*."
-  (case *class*
-    (:32-bit 'program-header-32)
-    (:64-bit 'program-header-64)
-    (otherwise (error 'bad-elf-class :class *class*))))
-
 (defmethod read-value ((type (eql 'elf)) in &key)
   "Read an elf object from a binary input stream."
   (let ((e (make-instance 'elf)))
@@ -542,7 +557,7 @@ section (in the file)."
                         ((or (string= ".dynsym" name) (string= ".symtab" name))
                          (file-position in (offset sh))
                          (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                            collect (read-value 'elf-sym in)))
+                            collect (read-value (elf-sym-type) in)))
                         ((string= ".dynamic" name)
                          (file-position in (offset sh))
                          (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
@@ -600,7 +615,7 @@ section (in the file)."
                (cond
                  ((or (string= ".dynsym" (name sec))
                       (string= ".symtab" (name sec)))
-                  (dolist (sym (data sec)) (write-value 'elf-sym out sym)))
+                  (dolist (sym (data sec)) (write-value (elf-sym-type) out sym)))
                  ((string= ".dynamic" (name sec))
                   (dolist (dyn (data sec))
                     (write-value 'elf-dyn out dyn)))
@@ -772,9 +787,12 @@ section (in the file)."
          (let ((size (cond
                        ((stringp el)
                         (let ((sec (named-section elf el)))
-                          (if (equal :nobits (type sec))
-                              0
-                              (length (data sec)))))
+                          (cond
+                            ((equal :nobits (type sec)) 0)
+                            ((member (name sec) '(".dynsym" ".dynamic" ".symtab")
+                                     :test #'string=)
+                             (* (length (data sec)) (entsize (sh sec))))
+                            (t (length (data sec))))))
                        ((vectorp el) (length el))
                        ((eq :header el) 52)
                        ((eq :section-table el)
@@ -785,7 +803,7 @@ section (in the file)."
            (list beg
                  (if (stringp el)
                      (offset (sh (named-section elf el)))
-                     :no)
+                     :none)
                  (cond ((stringp el) el) ((vectorp el) :filler) (t el))
                  (setf beg (+ beg size)))))
        (ordering elf))))))
