@@ -68,6 +68,15 @@
   (loop for el in sequence as n from 0
      collect (list n el)))
 
+(defun subseq-of (sub seq &key (start 0))
+  "If SUB is a occurs in SEQ, return the index at which is appears."
+  (block nil
+    (mapcon (lambda (seq)
+              (when (starts-with-subseq sub seq)
+                (return start))
+              (incf start))
+            (coerce (subseq seq start) 'list))))
+
 (defun my-slot-definition-name (el)
   #+sbcl
   (sb-mop::slot-definition-name el)
@@ -956,5 +965,27 @@ section (in the file)."
      (declare (ignorable value))
      (setf (disasm (named-symbol elf name)) addrs))
    (objdump-parse (objdump-sec elf ".text"))))
+
+(defmethod disasm ((sec section))
+  "Map disassembly information in symbols to the contents of SEC."
+  (let* ((sec-shndx (position sec (sections (elf sec))))
+         (w/offset
+          (mapcar
+           (lambda (sym)
+             (when-let (offset (subseq-of
+                                (apply #'append (mapcar #'second (disasm sym)))
+                                (data sec)))
+               (cons offset sym)))
+           ;; Note: perhaps this should check if symbol's shndx matches SEC
+           (remove-if (complement #'disasm) (symbols (elf sec))))))
+    ;; return a list of length equal to (data sec) and disassembly
+    ;; values in the appropriate positions
+    (let ((disasm (make-array (length (data sec)) :initial-element nil)))
+      (mapc (lambda-bind ((offset . sym))
+              (dotimes (n (length (disasm sym)))
+                (setf (aref disasm (+ offset n))
+                      (nth n (disasm sym)))))
+            w/offset)
+      disasm)))
 
 ;;; end of elf.lisp
