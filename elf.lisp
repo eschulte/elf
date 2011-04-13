@@ -42,7 +42,7 @@
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
-   :filesz :memsz :align :sym-name
+   :filesz :memsz :align :sym-name :other :value :shndx
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
