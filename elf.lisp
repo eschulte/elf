@@ -453,6 +453,7 @@
       (error "Can't set val for dynamic section of type ~a" (tag dyn))))
 
 (defun dynamic-entry (sec)
+  "Return the entry in .dynamic associated with SEC."
   (let* ((tags (dolist (dyn (data (named-section (elf sec) ".dynamic")))
                  (when (keywordp (tag dyn))
                    (cons (symbol-name (tag dyn)) dyn))))
@@ -747,6 +748,14 @@ section (in the file)."
 
 
 ;;; Misc functions
+(defmethod sym-name ((elf elf) (elf-sym elf-sym))
+  "Return the symbol name of ELF-SYM in ELF."
+  (let ((tab (data (named-section elf ".strtab"))))
+    (coerce (loop for code in (coerce (subseq tab (name elf-sym)) 'list)
+               until (equal code 0)
+               collect (code-char code))
+            'string)))
+
 (defun named-section (elf name)
   "Return the section in ELF named NAME."
   (first (remove-if (lambda (sec) (not (string= name (name sec)))) (sections elf))))
