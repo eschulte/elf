@@ -121,10 +121,10 @@
   #-(or sbcl clisp ccl)
   (error "no temporary file backend for this lisp."))
 
-(defun trim (str &key (char #\Space))
-  (loop until (or (emptyp str) (not (equal (aref str 0) char)))
+(defun trim (str &key (chars '(#\Space #\Tab)))
+  (loop until (or (emptyp str) (not (member (aref str 0) chars)))
      do (setf str (subseq str 1)))
-  (loop until (or (emptyp str) (not (equal (aref str (1- (length str))) char)))
+  (loop until (or (emptyp str) (not (member (aref str (1- (length str))) chars)))
      do (setf str (subseq str 0 (1- (length str)))))
   str)
 
@@ -932,10 +932,14 @@ section (in the file)."
     (flet ((parse-addresses (lines)
              (mapcar
               (lambda (line)
-                (list (parse-integer (subseq line 1 8) :radix 16)
-                      (mapcar (lambda (num) (parse-integer num :radix 16))
-                              (split-sequence #\Space
-                                              (trim (subseq line 10 31))))))
+                (list
+                 ;; address in memory
+                 (parse-integer (subseq line 1 8) :radix 16)
+                 ;; bytes
+                 (mapcar (lambda (num) (parse-integer num :radix 16))
+                         (split-sequence #\Space (trim (subseq line 10 31))))
+                 ;; disassembled assembly text
+                 (trim (subseq line 32))))
               (remove-if (lambda (line)
                            (or (< (length line) 34)
                                (not (equal #\: (aref line 8)))))
