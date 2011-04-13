@@ -4,4 +4,9 @@
   :name "elf"
   :author "Eric Schulte <schulte.eric@gmail.com>"
   :components ((:file "elf"))
-  :depends-on (com.gigamonkeys.binary-data metabang-bind))
+  :depends-on (alexandria
+               com.gigamonkeys.binary-data
+               metabang-bind
+               split-sequence
+               trivial-shell
+               cl-ppcre))

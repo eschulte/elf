@@ -29,20 +29,33 @@
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 #+sbcl
 (unlock-package :common-lisp)
+(require 'alexandria)
 (require 'com.gigamonkeys.binary-data)
 (require 'metabang-bind)
+(require 'split-sequence)
+(require 'trivial-shell)
+(require 'cl-ppcre)
 (defpackage #:elf
-  (:use :common-lisp :com.gigamonkeys.binary-data :metabang-bind)
+  (:use
+   :common-lisp
+   :alexandria
+   :com.gigamonkeys.binary-data
+   :metabang-bind
+   :split-sequence
+   :trivial-shell
+   :cl-ppcre)
   (:export
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
-   :mapslots :generic-copy :copy-elf :named-symbol
+   :mapslots :generic-copy :copy-elf :named-symbol :symbols
+   ;; disassembly functions
+   :objdump-sec :objdump-parse :objdump-apply
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
-   :filesz :memsz :align :sym-name :other :value :shndx
+   :filesz :memsz :align :sym-name :other :value :shndx :disasm
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
@@ -95,6 +108,32 @@
           obj)
          new))
       (t (error "~&don't know how to copy ~a" obj)))))
+
+(defun temp-file-name ()
+  #+clisp
+  (let ((stream (gensym)))
+    (eval `(with-open-stream (,stream (ext:mkstemp nil))
+             (pathname ,stream))))
+  #+sbcl
+  (swank-backend::temp-file-name)
+  #+ccl
+  (ccl:temp-pathname)
+  #-(or sbcl clisp ccl)
+  (error "no temporary file backend for this lisp."))
+
+(defun trim (str &key (char #\Space))
+  (loop until (or (emptyp str) (not (equal (aref str 0) char)))
+     do (setf str (subseq str 1)))
+  (loop until (or (emptyp str) (not (equal (aref str (1- (length str))) char)))
+     do (setf str (subseq str 0 (1- (length str)))))
+  str)
+
+(defmacro lambda-registers (registers regexp &body body)
+  "Create a function over the register matches using `register-groups-bind'."
+  (with-gensyms (string)
+    `(lambda (,string)
+       (register-groups-bind ,registers (,regexp ,string)
+         ,@body))))
 
 
 ;;; Basic Binary types
@@ -381,7 +420,8 @@
     (otherwise (error 'bad-elf-class :class *class*))))
 
 (defclass elf-sym ()
-  ((sym-name :initform nil :accessor sym-name)))
+  ((sym-name :initform nil :accessor sym-name)
+   (disasm   :initform nil :accessor disasm)))
 
 (define-binary-class elf-sym-32 (elf-sym)
   ((name  word)
@@ -762,10 +802,14 @@ section (in the file)."
   "Return the section in ELF named NAME."
   (first (remove-if (lambda (sec) (not (string= name (name sec)))) (sections elf))))
 
+(defmethod symbols ((elf elf))
+  "Return the symbols contained in ELF."
+  (data (named-section elf ".symtab")))
+
 (defun named-symbol (elf name)
   "Return the symbol in ELF named NAME."
   (first (remove-if (lambda (sec) (not (string= name (sym-name sec))))
-                    (data (named-section elf ".symtab")))))
+                    (symbols elf))))
 
 (defun elf-p (file)
   "Return t if file is an ELF file (using the magic number test)."
@@ -869,5 +913,44 @@ section (in the file)."
          (mapcar (lambda (sec)
                    (list (address (sh sec)) (size sec) (name sec)))
                  sections))) #'< :key #'car)))))
+
+
+;;; disassembly functions using objdump from GNU binutils
+(defun objdump-sec (elf sec-name)
+  "Use objdump to return the disassembly of section SEC-NAME in ELF."
+  (let ((path (temp-file-name)))
+    (write-elf elf path)
+    (unwind-protect
+         (shell-command (format nil "objdump -j ~a -d ~a" sec-name path))
+      (delete-file path))))
+
+(defun objdump-parse (output)
+  "Parse the output of `objdump-sec' returning the disassembly by symbol."
+  (let ((lines (split-sequence #\Newline output))
+        (sec-header (lambda-registers (addr name) "^([0-9a-f]+) <(.+)>:$"
+                      (cons (parse-integer addr :radix 16) name))))
+    (flet ((parse-addresses (lines)
+             (mapcar
+              (lambda (line)
+                (list (parse-integer (subseq line 1 8) :radix 16)
+                      (mapcar (lambda (num) (parse-integer num :radix 16))
+                              (split-sequence #\Space
+                                              (trim (subseq line 10 31))))))
+              (remove-if (lambda (line)
+                           (or (< (length line) 34)
+                               (not (equal #\: (aref line 8)))))
+                         lines))))
+      (mapcar #'list
+              (remove nil (mapcar sec-header lines))
+              (mapcar #'parse-addresses
+                      (cdr (split-sequence-if sec-header lines)))))))
+
+(defun objdump-apply (elf)
+  "Save the output of `objdump-parse' into the symbols of ELF."
+  (mapcar
+   (lambda-bind (((value . name) . addrs))
+     (declare (ignorable value))
+     (setf (disasm (named-symbol elf name)) addrs))
+   (objdump-parse (objdump-sec elf ".text"))))
 
 ;;; end of elf.lisp

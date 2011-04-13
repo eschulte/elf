@@ -25,14 +25,11 @@
 (in-package #:cl-user)
 (require 'elf)
 (require 'stefil)
-(require 'alexandria)
-(require 'trivial-shell)
 (in-package #:elf)
-(use-package 'alexandria)
-(use-package 'trivial-shell)
+(use-package 'stefil)
 
-(stefil:defsuite elf-test)
-(stefil:in-suite elf-test)
+(defsuite elf-test)
+(in-suite elf-test)
 
 
 ;;; generic forensic functions over arbitrary objects
@@ -106,7 +103,7 @@ Optional argument OUT specifies an output stream."
 (defvar *tmp-file* nil "temporary file used for testing")
 (defvar *elf* nil "variable to hold elf object")
 
-(stefil:defixture hello-elf
+(defixture hello-elf
   (:setup
    (setf *tmp-file* "./hello.tmp")
    (when (probe-file *tmp-file*) (delete-file *tmp-file*))
@@ -115,12 +112,12 @@ Optional argument OUT specifies an output stream."
    (when (probe-file *tmp-file*)
      (delete-file *tmp-file*))))
 
-(stefil:deftest test-write-elf (elf path)
-  (stefil:is (progn (write-elf elf path) (probe-file path))))
+(deftest test-write-elf (elf path)
+  (is (progn (write-elf elf path) (probe-file path))))
 
-(stefil:deftest test-read-elf (path)
+(deftest test-read-elf (path)
   (let (out)
-    (stefil:is (setf out (read-elf path)))
+    (is (setf out (read-elf path)))
     out))
 
 (defun run-elf-tests ()
@@ -129,44 +126,44 @@ Optional argument OUT specifies an output stream."
 
 
 ;;; tests which run
-(stefil:deftest test-magic-number ()
-  (stefil:with-fixture hello-elf
+(deftest test-magic-number ()
+  (with-fixture hello-elf
     (let ((magic-number (concatenate 'string (string (code-char #x7f)) "ELF")))
-      (stefil:is (equal magic-number (magic-number (header *elf*)))))))
+      (is (equal magic-number (magic-number (header *elf*)))))))
 
-(stefil:deftest test-section-sizes ()
-  (stefil:with-fixture hello-elf
+(deftest test-section-sizes ()
+  (with-fixture hello-elf
     (dolist (sec (sections *elf*))
       (unless (member (name sec) '(".dynsym" ".dynamic" ".symtab")
                       :test #'string=)
-        (stefil:is (= (size (sh sec)) (length (data sec)))
-                   "section:~a data:~a != size:~a"
-                   (name sec) (length (data sec)) (size (sh sec)))))))
+        (is (= (size (sh sec)) (length (data sec)))
+            "section:~a data:~a != size:~a"
+            (name sec) (length (data sec)) (size (sh sec)))))))
 
-(stefil:deftest test-idempotent-read-write ()
-  (stefil:with-fixture hello-elf
-    (stefil:is (equal *test-class* *class*))
+(deftest test-idempotent-read-write ()
+  (with-fixture hello-elf
+    (is (equal *test-class* *class*))
     (test-write-elf *elf* *tmp-file*)
-    (stefil:is (equal-it *elf* (test-read-elf *tmp-file*)))))
+    (is (equal-it *elf* (test-read-elf *tmp-file*)))))
 
-(stefil:deftest test-write-working-executable ()
-  (stefil:with-fixture hello-elf
+(deftest test-write-working-executable ()
+  (with-fixture hello-elf
     (test-write-elf *elf* *tmp-file*)
-    (stefil:is (probe-file *tmp-file*))
-    (stefil:is #+ccl t ;; can't run this shell in ccl
-               #-ccl (progn
-                       (shell-command (format "chmod +x ~a" *tmp-file*))
-                       (equal "hello world" (car (shell-command *tmp-file*)))))))
+    (is (probe-file *tmp-file*))
+    (is #+ccl t ;; can't run this shell in ccl
+        #-ccl (progn
+                (shell-command (format "chmod +x ~a" *tmp-file*))
+                (equal "hello world" (car (shell-command *tmp-file*)))))))
 
-(stefil:deftest test-tweaked-text-working-executable ()
-  (stefil:with-fixture hello-elf
+(deftest test-tweaked-text-working-executable ()
+  (with-fixture hello-elf
     ;; change a `noop' which is not on the execution path to a `ret'
     (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
     (test-write-elf *elf* *tmp-file*)
-    (stefil:is (probe-file *tmp-file*))
-    (stefil:is #+ccl t ;; can't run this shell in ccl
-               #-ccl (progn
-                       (shell-command (format "chmod +x ~a" *tmp-file*))
-                       (equal "hello world" (car (shell-command *tmp-file*)))))))
+    (is (probe-file *tmp-file*))
+    (is #+ccl t ;; can't run this shell in ccl
+        #-ccl (progn
+                (shell-command (format "chmod +x ~a" *tmp-file*))
+                (equal "hello world" (car (shell-command *tmp-file*)))))))
 
 ;;; elf-test.lisp ends here
