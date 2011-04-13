@@ -952,7 +952,7 @@ section (in the file)."
 (defun objdump-apply (elf)
   "Save the output of `objdump-parse' into the symbols of ELF."
   (mapcar
-   (lambda-bind (((value . name) . addrs))
+   (lambda-bind (((value . name) . (addrs)))
      (declare (ignorable value))
      (setf (disasm (named-symbol elf name)) addrs))
    (objdump-parse (objdump-sec elf ".text"))))
