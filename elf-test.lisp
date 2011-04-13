@@ -166,4 +166,24 @@ Optional argument OUT specifies an output stream."
                 (shell-command (format "chmod +x ~a" *tmp-file*))
                 (equal "hello world" (car (shell-command *tmp-file*)))))))
 
+(deftest test-objdump-sec ()
+  (with-fixture hello-elf
+    (is (stringp (objdump-sec *elf* ".text")))))
+
+(deftest test-objdump-parse ()
+  (with-fixture hello-elf
+    (let ((sym-names (mapcar #'sym-name (symbols *elf*))))
+      (mapc
+       (lambda-bind (((value . name) . addrs))
+         (is (numberp value))
+         (is (stringp name))
+         (is (listp addrs))
+         (is (member name sym-names :test #'string=)))
+       (objdump-parse (objdump-sec *elf* ".text"))))))
+
+(deftest test-objdump-apply ()
+  (with-fixture hello-elf
+    (objdump-apply *elf*)
+    (is (listp (disasm (named-symbol *elf* "main"))))))
+
 ;;; elf-test.lisp ends here
