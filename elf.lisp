@@ -37,12 +37,12 @@
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
-   :mapslots :generic-copy :copy-elf
+   :mapslots :generic-copy :copy-elf :named-symbol
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
-   :filesz :memsz :align
+   :filesz :memsz :align :sym-name
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
