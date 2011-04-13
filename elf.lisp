@@ -216,24 +216,24 @@
 
 ;; ELF dictionaries -- ELF header
 (define-elf-dictionary elf-type 2
-                       ((0 . :none)
-                        (1 . :relocatable)
-                        (2 . :executable)
-                        (3 . :shared-object)
-                        (4 . :core)))
+  ((0 . :none)
+   (1 . :relocatable)
+   (2 . :executable)
+   (3 . :shared-object)
+   (4 . :core)))
 
 (define-elf-dictionary elf-machine 2
-                       ((0 . :no-machine)
-                        (1 . :at&t-we-32100)
-                        (2 . :sun-sparc)
-                        (3 . :intel-80386)
-                        (4 . :motorola-m68k-family)
-                        (5 . :motorola-m88k-family)
-                        (7 . :intel-80860)
-                        (8 . :mips-r3000-big-endian)))
+  ((0 . :no-machine)
+   (1 . :at&t-we-32100)
+   (2 . :sun-sparc)
+   (3 . :intel-80386)
+   (4 . :motorola-m68k-family)
+   (5 . :motorola-m88k-family)
+   (7 . :intel-80860)
+   (8 . :mips-r3000-big-endian)))
 
 (define-elf-dictionary elf-version 4
-                       ((0 . :invalid) (1 . :current)))
+  ((0 . :invalid) (1 . :current)))
 
 (let ((dictionary '((0 . :invalid) (1 . :32-bit) (2 . :64-bit))))
   ;; this special dictionary will set the value of the *class* special
@@ -248,67 +248,67 @@
 
 ;; section header table
 (define-elf-dictionary sh-type 4
-                       ((0 . :null)
-                        (1 . :progbits)
-                        (2 . :symtab)
-                        (3 . :strtab)
-                        (4 . :rela)
-                        (5 . :hash)
-                        (6 . :dynamic)
-                        (7 . :note)
-                        (8 . :nobits)
-                        (9 . :rel)
-                        (10 . :shlib)
-                        (11 . :dynsym)))
+  ((0 . :null)
+   (1 . :progbits)
+   (2 . :symtab)
+   (3 . :strtab)
+   (4 . :rela)
+   (5 . :hash)
+   (6 . :dynamic)
+   (7 . :note)
+   (8 . :nobits)
+   (9 . :rel)
+   (10 . :shlib)
+   (11 . :dynsym)))
 
 (define-elf-dictionary sh-flags 4
-                       ((1 . :writable)
-                        (2 . :allocatable)
-                        (4 . :executable))
-                       :class-dependent t)
+  ((1 . :writable)
+   (2 . :allocatable)
+   (4 . :executable))
+  :class-dependent t)
 
 ;; program header table
 (define-elf-dictionary ph-type 4
-                       ((0 . :null)
-                        (1 . :load)
-                        (2 . :dynamic)
-                        (3 . :interp)
-                        (4 . :note)
-                        (5 . :shlib)
-                        (6 . :phdr)
-                        (1685382480 . :gnu_eh_frame)
-                        (1685382481 . :gnu_stack)
-                        (1685382482 . :gnu_relro)
-                        (1879048186 . :sunwbss)
-                        (1879048187 . :sunwstack)))
+  ((0 . :null)
+   (1 . :load)
+   (2 . :dynamic)
+   (3 . :interp)
+   (4 . :note)
+   (5 . :shlib)
+   (6 . :phdr)
+   (1685382480 . :gnu_eh_frame)
+   (1685382481 . :gnu_stack)
+   (1685382482 . :gnu_relro)
+   (1879048186 . :sunwbss)
+   (1879048187 . :sunwstack)))
 
 ;; .dynamic section tag
 (define-elf-dictionary dyn-tag 4
-                       ((0  . :null)
-                        (1  . :needed)
-                        (2  . :pltrelsz)
-                        (3  . :pltgot)
-                        (4  . :hash)
-                        (5  . :strtab)
-                        (6  . :symtab)
-                        (7  . :rela)
-                        (8  . :relasz)
-                        (9  . :relaent)
-                        (10 . :strsz)
-                        (11 . :syment)
-                        (12 . :init)
-                        (13 . :fini)
-                        (14 . :soname)
-                        (15 . :rpath)
-                        (16 . :symbolic)
-                        (17 . :rel)
-                        (18 . :relsz)
-                        (19 . :relent)
-                        (20 . :pltrel)
-                        (21 . :debug)
-                        (22 . :textrel)
-                        (23 . :jmprel))
-                       :signed t :class-dependent t)
+  ((0  . :null)
+   (1  . :needed)
+   (2  . :pltrelsz)
+   (3  . :pltgot)
+   (4  . :hash)
+   (5  . :strtab)
+   (6  . :symtab)
+   (7  . :rela)
+   (8  . :relasz)
+   (9  . :relaent)
+   (10 . :strsz)
+   (11 . :syment)
+   (12 . :init)
+   (13 . :fini)
+   (14 . :soname)
+   (15 . :rpath)
+   (16 . :symbolic)
+   (17 . :rel)
+   (18 . :relsz)
+   (19 . :relent)
+   (20 . :pltrel)
+   (21 . :debug)
+   (22 . :textrel)
+   (23 . :jmprel))
+  :signed t :class-dependent t)
 
 
 ;;; Classes, readers and writers
@@ -380,7 +380,8 @@
     (:64-bit 'program-header-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
-(defclass elf-sym () ())
+(defclass elf-sym ()
+  ((sym-name :initform nil :accessor sym-name)))
 
 (define-binary-class elf-sym-32 (elf-sym)
   ((name  word)
@@ -626,6 +627,15 @@ section (in the file)."
                                  acc)
                          (cons part acc)))))
                (cdr parts) :initial-value (list (car parts))))))))))
+    ;; initialize symbol names in .symtab
+    (let ((tab (coerce (data (named-section e ".strtab")) 'list)))
+      (mapcar (lambda (sym)
+                (setf (sym-name sym)
+                      (coerce (loop for code in (subseq tab (name sym))
+                                 until (equal code 0)
+                                 collect (code-char code))
+                              'string)))
+              (data (named-section e ".symtab"))))
     e))
 
 (defmethod write-value ((type (eql 'elf)) out value &key)
@@ -748,17 +758,14 @@ section (in the file)."
 
 
 ;;; Misc functions
-(defmethod sym-name ((elf elf) (elf-sym elf-sym))
-  "Return the symbol name of ELF-SYM in ELF."
-  (let ((tab (data (named-section elf ".strtab"))))
-    (coerce (loop for code in (coerce (subseq tab (name elf-sym)) 'list)
-               until (equal code 0)
-               collect (code-char code))
-            'string)))
-
 (defun named-section (elf name)
   "Return the section in ELF named NAME."
   (first (remove-if (lambda (sec) (not (string= name (name sec)))) (sections elf))))
+
+(defun named-symbol (elf name)
+  "Return the symbol in ELF named NAME."
+  (first (remove-if (lambda (sec) (not (string= name (sym-name sec))))
+                    (data (named-section elf ".symtab")))))
 
 (defun elf-p (file)
   "Return t if file is an ELF file (using the magic number test)."
