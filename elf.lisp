@@ -23,127 +23,12 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
-(in-package #:cl-user)
 ;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
 #+clisp
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 #+sbcl
 (unlock-package :common-lisp)
-(require 'alexandria)
-(require 'com.gigamonkeys.binary-data)
-(require 'metabang-bind)
-(require 'split-sequence)
-(require 'trivial-shell)
-(require 'cl-ppcre)
-(defpackage #:elf
-  (:use
-   :common-lisp
-   :alexandria
-   :com.gigamonkeys.binary-data
-   :metabang-bind
-   :split-sequence
-   :trivial-shell
-   :cl-ppcre)
-  (:export
-   ;; functions
-   :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
-   :show-dynamic :show-symbols :show-file-layout :show-memory-layout
-   :mapslots :generic-copy :copy-elf :named-symbol :symbols
-   ;; disassembly functions
-   :objdump-sec :objdump-parse :objdump-apply
-   ;; methods
-   :un-type :ptr  :val :binding :type :offset  :vma 
-   :size  :type  :flags :alignment :read-value :write-value
-   :address :link :info :addralign :entsize :vaddr :paddr
-   :filesz :memsz :align :sym-name :other :value :shndx :disasm
-   ;; section class
-   :elf :sh :ph :name :data
-   ;; elf class
-   :header :section-table :program-table :sections :ordering))
 (in-package #:elf)
-
-
-;;; Utility functions
-(defun indexed (sequence)
-  (loop for el in sequence as n from 0
-     collect (list n el)))
-
-(defun subseq-of (sub seq &key (start 0))
-  "If SUB is a occurs in SEQ, return the index at which is appears."
-  (block nil
-    (mapcon (lambda (seq)
-              (when (starts-with-subseq sub seq)
-                (return start))
-              (incf start))
-            (coerce (subseq seq start) 'list))
-    (return nil)))
-
-(defun my-slot-definition-name (el)
-  #+sbcl
-  (sb-mop::slot-definition-name el)
-  #+ccl
-  (ccl:slot-definition-name el)
-  #-(or sbcl ccl)
-  (#'clos::slot-definition-name el))
-
-(defun my-class-slots (el)
-  #+sbcl
-  (sb-mop::class-slots el)
-  #+ccl
-  (ccl:class-slots el)
-  #-(or sbcl ccl)
-  (clos::class-slots el))
-
-(defun mapslots (func obj)
-  "Map func over the slots of the clos object OBJ."
-  (mapcar func
-          (mapcar #'my-slot-definition-name
-                  (my-class-slots (class-of obj)))))
-
-(defun generic-copy (obj &optional trace)
-  "A generic copy method, may run way too long on partially circular elements."
-  (let ((trace1 (concatenate 'list (list obj) trace)))
-    (cond
-      ((or (numberp obj) (symbolp obj)) obj)
-      ((stringp obj) (copy-seq obj))
-      ((member obj trace) obj)      ; don't follow circular structures
-      ((or (listp obj) (vectorp obj))
-       (coerce (mapcar (lambda (el) (generic-copy el trace1)) (coerce obj 'list))
-               (cond ((listp obj) 'list) ((vectorp obj) 'vector))))
-      ((my-class-slots (class-of obj))
-       (let ((new (make-instance (class-name (class-of obj)))))
-         (mapslots
-          (lambda (slot) (setf (slot-value new slot)
-                          (generic-copy (slot-value obj slot) trace1)))
-          obj)
-         new))
-      (t (error "~&don't know how to copy ~a" obj)))))
-
-(defun temp-file-name ()
-  #+clisp
-  (let ((stream (gensym)))
-    (eval `(with-open-stream (,stream (ext:mkstemp nil))
-             (pathname ,stream))))
-  #+sbcl
-  (swank-backend::temp-file-name)
-  #+ccl
-  (ccl:temp-pathname)
-  #-(or sbcl clisp ccl)
-  (error "no temporary file backend for this lisp."))
-
-(defun trim (str &key (chars '(#\Space #\Tab)))
-  (loop until (or (emptyp str) (not (member (aref str 0) chars)))
-     do (setf str (subseq str 1)))
-  (loop until (or (emptyp str) (not (member (aref str (1- (length str))) chars)))
-     do (setf str (subseq str 0 (1- (length str)))))
-  str)
-
-(defmacro lambda-registers (registers regexp &body body)
-  "Create a function over the register matches using `register-groups-bind'."
-  (with-gensyms (string)
-    `(lambda (,string)
-       (register-groups-bind ,registers (,regexp ,string)
-         ,@body))))
 
 
 ;;; Basic Binary types
@@ -990,4 +875,4 @@ section (in the file)."
             w/offset)
       disasm)))
 
-;;; end of elf.lisp
+;;; elf.lisp ends here
