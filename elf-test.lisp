@@ -198,4 +198,25 @@ Optional argument OUT specifies an output stream."
                                    (lambda (sym) (mapcar #'second (second sym)))
                                    (objdump-parse (objdump .text))))))))))
 
+(deftest test-addresses-compared-w/objdump-output ()
+  (with-fixture hello-elf
+    (let ((.text (named-section *elf* ".text")))
+      (is (equal-it
+           (apply #'append
+                  (mapcar
+                   (lambda-bind ((addr bytes disasm))
+                     (declare (ignorable disasm))
+                     (mapcar (lambda (_)
+                               (declare (ignorable _))
+                               (prog1 addr (incf addr))) bytes))
+                   (apply #'append
+                          (mapcar #'second
+                                  (objdump-parse
+                                   (objdump (named-section *elf* ".text")))))))
+           (let ((addr (address (sh .text))))
+             (mapcar (lambda (_)
+                       (declare (ignorable _))
+                       (prog1 addr (incf addr)))
+                     (coerce (data .text) 'list))))))))
+
 ;;; elf-test.lisp ends here
