@@ -819,30 +819,34 @@ section (in the file)."
          (shell-command (format nil "objdump -j ~a -d ~a" sec-name path))
       (delete-file path))))
 
+(defun parse-addresses (lines)
+  "Parse addresses from lines of objdump output."
+  (mapcar
+   (lambda (line)
+     (list
+      ;; address in memory
+      (parse-integer (subseq line 1 8) :radix 16)
+      ;; bytes
+      (mapcar (lambda (num) (parse-integer num :radix 16))
+              (split-sequence
+               #\Space
+               (trim  (subseq line 10 (if (> (length line) 32) 31 nil)))))
+      ;; disassembled assembly text
+      (when (> (length line) 31) (trim (subseq line 32)))))
+   (remove-if (lambda (line)
+                (or (< (length line) 9)
+                    (not (equal #\: (aref line 8)))))
+              lines)))
+
 (defun objdump-parse (output)
   "Parse the output of `objdump-sec' returning the disassembly by symbol."
   (let ((lines (split-sequence #\Newline output))
         (sec-header (lambda-registers (addr name) "^([0-9a-f]+) <(.+)>:$"
                       (cons (parse-integer addr :radix 16) name))))
-    (flet ((parse-addresses (lines)
-             (mapcar
-              (lambda (line)
-                (list
-                 ;; address in memory
-                 (parse-integer (subseq line 1 8) :radix 16)
-                 ;; bytes
-                 (mapcar (lambda (num) (parse-integer num :radix 16))
-                         (split-sequence #\Space (trim (subseq line 10 31))))
-                 ;; disassembled assembly text
-                 (trim (subseq line 32))))
-              (remove-if (lambda (line)
-                           (or (< (length line) 34)
-                               (not (equal #\: (aref line 8)))))
-                         lines))))
-      (mapcar #'list
-              (remove nil (mapcar sec-header lines))
-              (mapcar #'parse-addresses
-                      (cdr (split-sequence-if sec-header lines)))))))
+    (mapcar #'list
+            (remove nil (mapcar sec-header lines))
+            (mapcar #'parse-addresses
+                    (cdr (split-sequence-if sec-header lines))))))
 
 (defun objdump-apply (elf)
   "Save the output of `objdump-parse' into the symbols of ELF."
@@ -853,7 +857,10 @@ section (in the file)."
    (objdump-parse (objdump-sec elf ".text"))))
 
 (defmethod disasm ((sec section))
-  "Map disassembly information in symbols to the contents of SEC."
+  "Map disassembly information in symbols to the contents of SEC.
+Note: before calling this function disassembly information must be
+associated with the symbols of the related elf file using
+`objdump-apply'."
   (let* ((sec-shndx (position sec (sections (elf sec))))
          (w/offset
           (remove nil

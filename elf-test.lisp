@@ -181,6 +181,13 @@ Optional argument OUT specifies an output stream."
          (is (member name sym-names :test #'string=)))
        (objdump-parse (objdump-sec *elf* ".text"))))))
 
+(deftest test-objdump-parse-empty-instructions ()
+  (let ((lines (with-open-file (in "main.txt")
+                               (loop for line = (read-line in nil :eof)
+                                  until (eq line :eof)
+                                  collect line))))
+    (is (equal-it '(0) (second (nth 12 (parse-addresses lines)))))))
+
 (deftest test-objdump-apply ()
   (with-fixture hello-elf
     (objdump-apply *elf*)
