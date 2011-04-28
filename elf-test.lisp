@@ -166,9 +166,9 @@ Optional argument OUT specifies an output stream."
                 (shell-command (format "chmod +x ~a" *tmp-file*))
                 (equal "hello world" (car (shell-command *tmp-file*)))))))
 
-(deftest test-objdump-sec ()
+(deftest test-objdump ()
   (with-fixture hello-elf
-    (is (stringp (objdump-sec *elf* ".text")))))
+    (is (stringp (objdump (named-section *elf* ".text"))))))
 
 (deftest test-objdump-parse ()
   (with-fixture hello-elf
@@ -179,7 +179,7 @@ Optional argument OUT specifies an output stream."
          (is (stringp name))
          (is (listp addrs))
          (is (member name sym-names :test #'string=)))
-       (objdump-parse (objdump-sec *elf* ".text"))))))
+       (objdump-parse (objdump (named-section *elf* ".text")))))))
 
 (deftest test-objdump-parse-empty-instructions ()
   (let ((lines (with-open-file (in "main.txt")
@@ -187,10 +187,5 @@ Optional argument OUT specifies an output stream."
                                   until (eq line :eof)
                                   collect line))))
     (is (equal-it '(0) (second (nth 12 (parse-addresses lines)))))))
-
-(deftest test-objdump-apply ()
-  (with-fixture hello-elf
-    (objdump-apply *elf*)
-    (is (listp (disasm (named-symbol *elf* "main"))))))
 
 ;;; elf-test.lisp ends here

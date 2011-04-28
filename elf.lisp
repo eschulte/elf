@@ -315,8 +315,7 @@
     (otherwise (error 'bad-elf-class :class *class*))))
 
 (defclass elf-sym ()
-  ((sym-name :initform nil :accessor sym-name)
-   (disasm   :initform nil :accessor disasm)))
+  ((sym-name :initform nil :accessor sym-name)))
 
 (define-binary-class elf-sym-32 (elf-sym)
   ((name  word)
@@ -811,12 +810,12 @@ section (in the file)."
 
 
 ;;; disassembly functions using objdump from GNU binutils
-(defun objdump-sec (elf sec-name)
-  "Use objdump to return the disassembly of section SEC-NAME in ELF."
+(defmethod objdump ((sec section))
+  "Use objdump to return the disassembly of SEC."
   (let ((path (temp-file-name)))
-    (write-elf elf path)
+    (write-elf (elf sec) path)
     (unwind-protect
-         (shell-command (format nil "objdump -j ~a -d ~a" sec-name path))
+         (shell-command (format nil "objdump -j ~a -d ~a" (name sec) path))
       (delete-file path))))
 
 (defun parse-addresses (lines)
@@ -839,7 +838,7 @@ section (in the file)."
               lines)))
 
 (defun objdump-parse (output)
-  "Parse the output of `objdump-sec' returning the disassembly by symbol."
+  "Parse the output of `objdump' returning the disassembly by symbol."
   (let ((lines (split-sequence #\Newline output))
         (sec-header (lambda-registers (addr name) "^([0-9a-f]+) <(.+)>:$"
                       (cons (parse-integer addr :radix 16) name))))
@@ -847,39 +846,5 @@ section (in the file)."
             (remove nil (mapcar sec-header lines))
             (mapcar #'parse-addresses
                     (cdr (split-sequence-if sec-header lines))))))
-
-(defun objdump-apply (elf)
-  "Save the output of `objdump-parse' into the symbols of ELF."
-  (mapcar
-   (lambda-bind (((value . name) . (addrs)))
-     (declare (ignorable value))
-     (setf (disasm (named-symbol elf name)) addrs))
-   (objdump-parse (objdump-sec elf ".text"))))
-
-(defmethod disasm ((sec section))
-  "Map disassembly information in symbols to the contents of SEC.
-Note: before calling this function disassembly information must be
-associated with the symbols of the related elf file using
-`objdump-apply'."
-  (let* ((sec-shndx (position sec (sections (elf sec))))
-         (w/offset
-          (remove nil
-            (mapcar
-             (lambda (sym)
-               (when-let (offset (subseq-of
-                                  (apply #'append (mapcar #'second (disasm sym)))
-                                  (data sec)))
-                 (cons offset sym)))
-             ;; Note: perhaps this should check if symbol's shndx matches SEC
-             (remove-if (complement #'disasm) (symbols (elf sec)))))))
-    ;; return a list of length equal to (data sec) and disassembly
-    ;; values in the appropriate positions
-    (let ((disasm (make-array (length (data sec)) :initial-element nil)))
-      (mapc (lambda-bind ((offset . sym))
-              (dotimes (n (length (disasm sym)))
-                (setf (aref disasm (+ offset n))
-                      (nth n (disasm sym)))))
-            w/offset)
-      disasm)))
 
 ;;; elf.lisp ends here
