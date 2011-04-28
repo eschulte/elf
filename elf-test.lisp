@@ -188,4 +188,14 @@ Optional argument OUT specifies an output stream."
                                   collect line))))
     (is (equal-it '(0) (second (nth 12 (parse-addresses lines)))))))
 
+(deftest test-equality-of-data-and-objdump-bytes ()
+  (with-fixture hello-elf
+    (let ((.text (named-section *elf* ".text")))
+      (is (equal-it (coerce (data .text) 'list)
+                    (apply #'append
+                           (apply #'append
+                                  (mapcar
+                                   (lambda (sym) (mapcar #'second (second sym)))
+                                   (objdump-parse (objdump .text))))))))))
+
 ;;; elf-test.lisp ends here
