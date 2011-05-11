@@ -344,6 +344,25 @@
     (:64-bit 'elf-rel-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+(defmethod sym ((rel elf-rel))
+  (ash (info rel)
+       (case (class-name (class-of rel))
+         ((elf-rel-32 elf-rela-32) -8)
+         ((elf-rel-64 elf-rela-64) -32))))
+
+(defmethod type ((rel elf-rel-32))
+  (logand (info rel)
+          (case (class-name (class-of rel))
+            ((elf-rel-32 elf-rela-32) #xff)
+            ((elf-rel-64 elf-rela-64) #xffffffff))))
+
+(defun rel-info (sym type)
+  "Convert a symbol and type back into the info field of an elf-rel."
+  (case *class*
+    (:32-bit (+ (ash sym 8) (logand type #xff)))
+    (:64-bit (+ (ash sym 32) type))
+    (otherwise (error 'bad-elf-class :class *class*))))
+
 (defclass elf-rela () ())
 
 (define-binary-class elf-rela-32 (elf-rela)
