@@ -344,17 +344,35 @@
     (:64-bit 'elf-rel-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
-(defmethod sym ((rel elf-rel))
+(defmethod rel-sym ((rel elf-rel))
   (ash (info rel)
        (case (class-name (class-of rel))
          ((elf-rel-32 elf-rela-32) -8)
          ((elf-rel-64 elf-rela-64) -32))))
 
-(defmethod type ((rel elf-rel-32))
-  (logand (info rel)
-          (case (class-name (class-of rel))
-            ((elf-rel-32 elf-rela-32) #xff)
-            ((elf-rel-64 elf-rela-64) #xffffffff))))
+(defvar rel-types
+  '((:intel-80386
+     (0  . :none)
+     (1  . :32)
+     (2  . :pc32)
+     (3  . :got32)
+     (4  . :plt32)
+     (5  . :copy)
+     (6  . :glob-dat)
+     (7  . :jmp-slot)
+     (8  . :relative)
+     (9  . :gotoff)
+     (10 . :gotpc)))
+  "Association list of type meaning by machine type.")
+
+(defmethod rel-type ((rel elf-rel) (header elf-header))
+  "The interpretation of the type is machine specific."
+  (let ((val (logand (info rel)
+                     (case (class-name (class-of rel))
+                       ((elf-rel-32 elf-rela-32) #xff)
+                       ((elf-rel-64 elf-rela-64) #xffffffff)))))
+    (flet ((get (item lst) (cdr (assoc item lst))))
+      (or (get val (get (machine header) rel-types)) val))))
 
 (defun rel-info (sym type)
   "Convert a symbol and type back into the info field of an elf-rel."
