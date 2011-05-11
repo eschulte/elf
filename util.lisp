@@ -25,8 +25,6 @@
 ;;; Code:
 (in-package #:elf)
 
-
-;;; Utility functions
 (defun indexed (sequence)
   (loop for el in sequence as n from 0
      collect (list n el)))
@@ -40,6 +38,39 @@
               (incf start))
             (coerce (subseq seq start) 'list))
     (return nil)))
+
+;; The following two functions are adapted from:
+;; http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings
+(defun lcs (l1 l2 &key (test #'eql))
+  "Return the longest common sub-list of L1 and L2 using TEST."
+  (when (not (or (null l1) (null l2)))
+    (if (funcall test (car l1) (car l2))
+        (cons (car l1) (lcs (cdr l1) (cdr l2) :test test))
+        (first (sort (list (lcs l1 (cdr l2) :test test)
+                           (lcs (cdr l1) l2 :test test))
+                     (lambda (a b) (> (length a) (length b))))))))
+
+(defun diff (list1 list2 &key (test #'eql))
+  "Find the differences between LIST1 and LIST2 using TEST."
+  (let ((lcs (lcs list1 list2 :test test))
+        result)
+    (dolist (c lcs)
+      (let* ((sync-list1 (position c list1 :test test))
+             (sync-list2 (position c list2 :test test))
+             (removed (subseq list1 0 sync-list1))
+             (added (subseq list2 0 sync-list2)))
+        (setf list1 (subseq list1 (1+ sync-list1)))
+        (setf list2 (subseq list2 (1+ sync-list2)))
+        (when removed
+          (push (cons :removed removed) result))
+        (when added
+          (push (cons :added added) result))
+        (push c result)))
+    (when list1
+      (push (cons :removed list1) result))
+    (when list2
+      (push (cons :added list2) result))
+    (nreverse result)))
 
 (defun my-slot-definition-name (el)
   #+sbcl
