@@ -72,6 +72,23 @@
       (push (cons :added list2) result))
     (nreverse result)))
 
+(defun deltas (list1 list2 &key (test #'eql) &aux (delta 0))
+  "Return a list of index offsets for the elements of LIST1."
+  (nreverse
+   (reduce
+    (lambda (acc el)
+      (if (listp el)
+          (case (first el)
+            (:added   (prog1 acc
+                        (setf delta (+ delta (length (cdr el))))))
+            (:removed (prog1 (append (mapcar
+                                      (lambda (el) (declare (ignorable el)) delta)
+                                      (cdr el))
+                                     acc)
+                        (setf delta (- delta (length (cdr el)))))))
+          (cons delta acc)))
+    (diff list1 list2 :test test) :initial-value nil)))
+
 (defun my-slot-definition-name (el)
   #+sbcl
   (sb-mop::slot-definition-name el)
