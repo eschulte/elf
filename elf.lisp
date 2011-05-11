@@ -642,10 +642,17 @@ section (in the file)."
                (cond
                  ((or (string= ".dynsym" (name sec))
                       (string= ".symtab" (name sec)))
-                  (dolist (sym (data sec)) (write-value (elf-sym-type) out sym)))
+                  (dolist (sym (data sec))
+                    (write-value (elf-sym-type) out sym)))
                  ((string= ".dynamic" (name sec))
                   (dolist (dyn (data sec))
                     (write-value (elf-dyn-type) out dyn)))
+                 ((equal :rel (type sec))
+                  (dolist (rel (data sec))
+                    (write-value (elf-rel-type) out rel)))
+                 ((equal :rela (type sec))
+                  (dolist (rel (data sec))
+                    (write-value (elf-rela-type) out rel)))
                  (t (write-bytes (data sec)))))))
           ((vectorp chunk)              ; raw filler
            (write-bytes chunk))

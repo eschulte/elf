@@ -134,8 +134,9 @@ Optional argument OUT specifies an output stream."
 (deftest test-section-sizes ()
   (with-fixture hello-elf
     (dolist (sec (sections *elf*))
-      (unless (member (name sec) '(".dynsym" ".dynamic" ".symtab")
-                      :test #'string=)
+      (unless (or (member (name sec) '(".dynsym" ".dynamic" ".symtab")
+                          :test #'string=)
+                  (member (type sec) '(:rel :rela)))
         (is (= (size (sh sec)) (length (data sec)))
             "section:~a data:~a != size:~a"
             (name sec) (length (data sec)) (size (sh sec)))))))
