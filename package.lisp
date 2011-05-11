@@ -15,12 +15,13 @@
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
    ;; disassembly functions
-   :objdump-sec :objdump-parse :objdump-apply
+   :objdump :parse-addresses :objdump-parse
    ;; methods
    :un-type :ptr  :val :binding :type :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
    :filesz :memsz :align :sym-name :other :value :shndx :disasm
+   :rel-sym :rel-type :rel-info
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
