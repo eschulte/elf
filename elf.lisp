@@ -140,13 +140,26 @@
              (:64-bit (bytes-to out (* 2 bytes) value))
              (otherwise (error 'bad-elf-class :class *class*)))))
 
+(define-binary-type class-dependent-signed-integer (bytes)
+  (:reader (in)
+           (case *class*
+             (:32-bit (bytes-from in bytes 'signed))
+             (:64-bit (bytes-from in (* 2 bytes) 'signed))
+             (t (error 'bad-elf-class :class *class*))))
+  (:writer (out value)
+           (case *class*
+             (:32-bit (bytes-to out bytes value 'signed))
+             (:64-bit (bytes-to out (* 2 bytes) value 'signed))
+             (otherwise (error 'bad-elf-class :class *class*)))))
+
 (define-binary-type char   () (unsigned-integer :bytes 1))
 (define-binary-type half   () (unsigned-integer :bytes 2))
 (define-binary-type word   () (unsigned-integer :bytes 4))
 (define-binary-type sword  () (signed-integer   :bytes 4))
-(define-binary-type xword  () (class-dependent-unsigned-integer :bytes 4))
 (define-binary-type addr   () (class-dependent-unsigned-integer :bytes 4))
 (define-binary-type off    () (class-dependent-unsigned-integer :bytes 4))
+(define-binary-type xword  () (class-dependent-unsigned-integer :bytes 4))
+(define-binary-type sxword () (class-dependent-signed-integer   :bytes 4))
 
 ;; ELF dictionaries -- ELF header
 (define-elf-dictionary elf-type 2
@@ -312,6 +325,42 @@
   (case *class*
     (:32-bit 'program-header-32)
     (:64-bit 'program-header-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
+(defclass elf-rel () ())
+
+(define-binary-class elf-rel-32 (elf-rel)
+  ((offset addr)
+   (info   word)))
+
+(define-binary-class elf-rel-64 (elf-rel)
+  ((offset addr)
+   (info   xword)))
+
+(defun elf-rel-type ()
+  "Return the appropriate type of elf relocation given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'elf-rel-32)
+    (:64-bit 'elf-rel-64)
+    (otherwise (error 'bad-elf-class :class *class*))))
+
+(defclass elf-rela () ())
+
+(define-binary-class elf-rela-32 (elf-rela)
+  ((offset addr)
+   (info   word)
+   (addend sword)))
+
+(define-binary-class elf-rela-64 (elf-rela)
+  ((offset addr)
+   (info   xword)
+   (addend sxword)))
+
+(defun elf-rela-type ()
+  "Return type of elf relocation (w/addend) given the value of *CLASS*."
+  (case *class*
+    (:32-bit 'elf-rela-32)
+    (:64-bit 'elf-rela-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
 (defclass elf-sym ()
@@ -523,6 +572,14 @@ section (in the file)."
                          (file-position in (offset sh))
                          (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
                             collect (read-value (elf-dyn-type) in)))
+                        ((equal :rel (type sh))
+                         (file-position in (offset sh))
+                         (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
+                            collect (read-value (elf-rel-type) in)))
+                        ((equal :rela (type sh))
+                         (file-position in (offset sh))
+                         (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
+                            collect (read-value (elf-rela-type) in)))
                         (t
                          (file-position in (offset h))
                          (read-value 'raw-bytes in :length (size section))))))
