@@ -167,6 +167,12 @@ Optional argument OUT specifies an output stream."
                 (shell-command (format "chmod +x ~a" *tmp-file*))
                 (equal "hello world" (car (shell-command *tmp-file*)))))))
 
+(deftest test-data-setf-changes ()
+  (with-fixture hello-elf
+    (let ((first-data (copy-seq (data (named-section *elf* ".text")))))
+      (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
+      (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
+
 (deftest test-objdump ()
   (with-fixture hello-elf
     (is (stringp (objdump (named-section *elf* ".text"))))))
