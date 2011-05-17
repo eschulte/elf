@@ -41,7 +41,7 @@
 
 ;; The following two functions are adapted from:
 ;; http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings
-(defun lcs (l1 l2 &key (test #'eql))
+(def-memoized-function lcs (l1 l2 &key (test #'eql))
   "Return the longest common sub-list of L1 and L2 using TEST."
   (when (not (or (null l1) (null l2)))
     (if (funcall test (car l1) (car l2))

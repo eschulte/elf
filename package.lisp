@@ -8,7 +8,8 @@
    :metabang-bind
    :split-sequence
    :trivial-shell
-   :cl-ppcre)
+   :cl-ppcre
+   :org.tfeb.hax.memoize)
   (:export
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
