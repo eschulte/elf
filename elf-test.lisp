@@ -27,6 +27,7 @@
 (require 'stefil)
 (in-package #:elf)
 (use-package 'stefil)
+(use-package 'trivial-timeout)
 
 (defsuite elf-test)
 (in-suite elf-test)
@@ -176,10 +177,15 @@ Optional argument OUT specifies an output stream."
       (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
 
 (deftest test-perniciously-long-data-setf-changes ()
-  (let ((*test-case* :64-bit))
+  (let ((*test-class* :64-bit))
     (with-fixture hello-elf
       (let ((text (data (named-section *elf* ".text"))))
-        (lcs (coerce text 'list) (reverse (coerce text 'list)))))))
+        (is (not (equal
+                  :timeout
+                  (handler-case
+                      (with-timeout (0.5)
+                        (lcs (coerce text 'list) (reverse (coerce text 'list))))
+                    (timeout-error (c) (declare (ignorable c)) :timeout)))))))))
 
 (deftest test-objdump ()
   (with-fixture hello-elf
