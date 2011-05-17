@@ -756,64 +756,68 @@ swapped instructions.")
            ;; a delta to decremented as sections change sizes
            (sec-deltas (list (cons end-point delta)))
            last)
-      (setf
-       (ordering elf)
-       (loop for chunk in (ordering elf)
-          if (equal chunk name)
-          do (setf last (+ (offset sec) new-length))
-          else do
-            (let ((d (cdar sec-deltas)))
-              (when (and last (> d 0))
-                (cond
-                  ((stringp chunk)      ; section
-                   (let ((sec (named-section elf chunk)))
-                     (when (not (zerop (address sh)))
-                       (when-let ((dyn (dynamic-entry sec)))
-                         (setf (ptr dyn) (+ (address sh) d)))
-                       (setf (address sh) (+ (address sh) d)))
-                     (setf (offset sec) last)
-                     (setf last (+ (offset sec) (size sec)))))
-                  ((vectorp chunk)      ; padding bytes
-                   (if (> d (length chunk))
-                       (progn (setq d (- d (length chunk)))
-                              (setq chunk nil))
-                       (progn (setq last (+ last (- (length chunk) d)))
-                              (setq chunk (subseq chunk d))
-                              (setq d 0))))
-                  ((equal :program-table chunk) ; program header
-                   (let ((header (header elf)))
-                     (setf (phoff header) (+ (phoff header) d))
-                     (setf last (+ (phoff header)
-                                   (* (ph-num header) (ph-ent-size header))))))
-                  ((equal :section-table chunk) ; section header
-                   (let ((header (header elf)))
-                     (setf (shoff header) (+ (shoff header) d))
-                     (setf last (+ (shoff header)
-                                   (* (sh-num header) (sh-ent-size header))))))))
-              (setf sec-deltas (cons (cons last d) sec-deltas)))
-          when chunk collect chunk))
+      (unless (= old-length new-length)
+        (setf
+         (ordering elf)
+         (loop for chunk in (ordering elf)
+            if (equal chunk name)
+            do (setf last (+ (offset sec) new-length))
+            else do
+              (let ((d (cdar sec-deltas)))
+                (when (and last (> d 0))
+                  (cond
+                    ((stringp chunk)      ; section
+                     (let ((sec (named-section elf chunk)))
+                       (when (not (zerop (address sh)))
+                         (when-let ((dyn (dynamic-entry sec)))
+                           (setf (ptr dyn) (+ (address sh) d)))
+                         (setf (address sh) (+ (address sh) d)))
+                       (setf (offset sec) last)
+                       (setf last (+ (offset sec) (size sec)))))
+                    ((vectorp chunk)      ; padding bytes
+                     (if (> d (length chunk))
+                         (progn (setq d (- d (length chunk)))
+                                (setq chunk nil))
+                         (progn (setq last (+ last (- (length chunk) d)))
+                                (setq chunk (subseq chunk d))
+                                (setq d 0))))
+                    ((equal :program-table chunk) ; program header
+                     (let ((header (header elf)))
+                       (setf (phoff header) (+ (phoff header) d))
+                       (setf last (+ (phoff header)
+                                     (* (ph-num header) (ph-ent-size header))))))
+                    ((equal :section-table chunk) ; section header
+                     (let ((header (header elf)))
+                       (setf (shoff header) (+ (shoff header) d))
+                       (setf last (+ (shoff header)
+                                     (* (sh-num header)
+                                        (sh-ent-size header))))))))
+                (setf sec-deltas (cons (cons last d) sec-deltas)))
+            when chunk collect chunk)))
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (let ((deltas (if (= *max-diff-to-update-headers* 0)
-                        (make-sequence 'list (length data) :initial-element 0)
-                        (deltas (coerce data 'list) (coerce new 'list)))))
-        ;; heuristic: don't update in-sec symbols if data is radically different
-        (when (> (apply #'+ deltas)
+      (let ((ds (if (= *max-diff-to-update-headers* 0)
+                    (make-sequence 'list (length data) :initial-element 0)
+                    (deltas (coerce data 'list) (coerce new 'list)))))
+        ;; heuristic: don't update in-sec symbols if data is too different
+        (when (> (apply #'+ ds)
                  (* *max-diff-to-update-headers* (* new-length old-length)))
-          (setf deltas (make-sequence 'list (length deltas) :initial-element 0)))
+          (setf ds nil))
+        (format t "~&~There~%")
         (dolist (sym (data (named-section elf ".dynsym")))
           (with-slots (value) sym
             (when (> value (offset sec))
               (setf value
-                    (+ value (if (and (>= value (offset sec))
-                                      (<= value (+ (offset sec) (size sec))))
-                                 ;; inside of the changed section
-                                 (nth (- value (offset sec)) deltas)
-                                 ;; after the changed section
-                                 (loop for pair in sec-deltas
-                                    do (when (> value (car pair))
-                                         (return (cdr pair)))))))))))
+                    (+ value (or (if (and (>= value (offset sec))
+                                          (<= value (+ (offset sec) (size sec))))
+                                     ;; inside of the changed section
+                                     (nth (- value (offset sec)) ds)
+                                     ;; after the changed section
+                                     (loop for pair in sec-deltas
+                                        do (when (> value (car pair))
+                                             (return (cdr pair)))))
+                                 0)))))))
       ;; update size and the contents of the section
       (setf (size sec) new-length)
       (set-data new sec))))
