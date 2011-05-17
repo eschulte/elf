@@ -11,7 +11,8 @@
                metabang-bind
                split-sequence
                trivial-shell
-               cl-ppcre)
+               cl-ppcre
+               memoize)
   :components ((:file "package")
                (:file "util"
                       :depends-on ("package"))

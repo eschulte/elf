@@ -26,4 +26,6 @@
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
-   :header :section-table :program-table :sections :ordering))
+   :header :section-table :program-table :sections :ordering
+   ;; sometimes helpful utility functions
+   :lcs :diff :deltas))
