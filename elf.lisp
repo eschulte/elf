@@ -734,8 +734,16 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
-(defvar *max-diff-to-update-headers* 0.25
-  "Proportion of max difference beyond which header updates aren't reasonable.")
+(defvar *max-diff-to-update-headers* 0
+  "Proportion of max difference beyond which header updates aren't reasonable.
+
+Note: This behavior is turned off by default.  Generally this is too
+/fancy/ for use on every data update, in that the `diff' and `deltas'
+algorithms may find complex series of offset to compensate for simple
+edits.  For example, swapping two instructions should not result in
+any re-arranging of the data section, however the above algorithms
+will generally assign an offset to *every* instruction between the two
+swapped instructions.")
 
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
@@ -787,7 +795,9 @@ section (in the file)."
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (let ((deltas (deltas (coerce data 'list) (coerce new 'list))))
+      (let ((deltas (if (= *max-diff-to-update-headers* 0)
+                        (make-sequence 'list (length data) :initial-element 0)
+                        (deltas (coerce data 'list) (coerce new 'list)))))
         ;; heuristic: don't update in-sec symbols if data is radically different
         (when (> (apply #'+ deltas)
                  (* *max-diff-to-update-headers* (* new-length old-length)))
