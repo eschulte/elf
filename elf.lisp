@@ -797,12 +797,12 @@ swapped instructions.")
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (let ((ds (if (= *max-diff-to-update-headers* 0)
-                    (make-sequence 'list (length data) :initial-element 0)
-                    (deltas (coerce data 'list) (coerce new 'list)))))
+      (let ((ds (unless (= *max-diff-to-update-headers* 0)
+                  (deltas (coerce data 'list) (coerce new 'list)))))
         ;; heuristic: don't update in-sec symbols if data is too different
-        (when (> (apply #'+ ds)
-                 (* *max-diff-to-update-headers* (* new-length old-length)))
+        (when (and ds (> (apply #'+ (remove-if-not #'numberp ds))
+                         (* *max-diff-to-update-headers*
+                            (* new-length old-length))))
           (setf ds nil))
         (dolist (sym (data (named-section elf ".dynsym")))
           (with-slots (value) sym
