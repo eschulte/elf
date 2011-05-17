@@ -804,7 +804,6 @@ swapped instructions.")
         (when (> (apply #'+ ds)
                  (* *max-diff-to-update-headers* (* new-length old-length)))
           (setf ds nil))
-        (format t "~&~There~%")
         (dolist (sym (data (named-section elf ".dynsym")))
           (with-slots (value) sym
             (when (> value (offset sec))
