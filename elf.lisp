@@ -734,6 +734,9 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
+(defvar *max-diff-to-update-headers* 0.25
+  "Proportion of max difference beyond which header updates aren't reasonable.")
+
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
   ;; step through the ordered sections, updating where required
@@ -785,6 +788,10 @@ section (in the file)."
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
       (let ((deltas (deltas (coerce data 'list) (coerce new 'list))))
+        ;; heuristic: don't update in-sec symbols if data is radically different
+        (when (> (apply #'+ deltas)
+                 (* *max-diff-to-update-headers* (* new-length old-length)))
+          (setf deltas (make-sequence 'list (length deltas) :initial-element 0)))
         (dolist (sym (data (named-section elf ".dynsym")))
           (with-slots (value) sym
             (when (> value (offset sec))
