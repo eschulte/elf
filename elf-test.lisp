@@ -176,17 +176,6 @@ Optional argument OUT specifies an output stream."
       (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
       (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
 
-(deftest test-perniciously-long-data-setf-changes ()
-  (let ((*test-class* :64-bit))
-    (with-fixture hello-elf
-      (let ((text (data (named-section *elf* ".text"))))
-        (is (not (equal
-                  :timeout
-                  (handler-case
-                      (with-timeout (0.5)
-                        (lcs (coerce text 'list) (reverse (coerce text 'list))))
-                    (timeout-error (c) (declare (ignorable c)) :timeout)))))))))
-
 (deftest test-objdump ()
   (with-fixture hello-elf
     (is (stringp (objdump (named-section *elf* ".text"))))))
