@@ -381,14 +381,12 @@
     (:64-bit (+ (ash sym 32) type))
     (otherwise (error 'bad-elf-class :class *class*))))
 
-(defclass elf-rela () ())
-
-(define-binary-class elf-rela-32 (elf-rela)
+(define-binary-class elf-rela-32 (elf-rel)
   ((offset addr)
    (info   word)
    (addend sword)))
 
-(define-binary-class elf-rela-64 (elf-rela)
+(define-binary-class elf-rela-64 (elf-rel)
   ((offset addr)
    (info   xword)
    (addend sxword)))
