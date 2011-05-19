@@ -79,6 +79,23 @@
       (push (cons :added list2) result))
     (nreverse result)))
 
+(defun edit-distance (s1 s2)
+  "Return the edit (levenshtein) distance between strings S1 S2."
+  (let* ((l1 (length s1)) (l2 (length s2))
+         (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element nil)))
+    (setf (aref d 0 0) 0)
+    (loop for i from 1 to l1
+       do (loop for j from 1 to l2
+             do (setf (aref d i j)
+                      (if (eql (aref s1 (1- i)) (aref s2 (1- j)))
+                          (aref d (1- i) (1- j))
+                          (1+ (apply #'min
+                                     (remove nil
+                                       (list (aref d (1- i) j)
+                                             (aref d i (1- j))
+                                             (aref d (1- i) (1- j))))))))))
+    (aref d l1 l2)))
+  
 (defun deltas (list1 list2 &key (test #'eql) &aux (delta 0))
   "Return a list of index offsets for the elements of LIST1."
   (nreverse
