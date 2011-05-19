@@ -25,6 +25,13 @@
 ;;; Code:
 (in-package #:elf)
 
+(defun range (n &optional m)
+  "Return the numbers in range."
+  (funcall (if (and m (< m n))
+               (prog1 #'nreverse (let ((o n)) (setf n m) (setf m o)))
+               #'identity)
+           (loop for num from (if m n 0) to (if m m (- n 1)) collect num)))
+
 (defun indexed (sequence)
   (loop for el in sequence as n from 0
      collect (list n el)))
@@ -48,7 +55,7 @@
         (cons (car l1) (lcs (cdr l1) (cdr l2) :test test))
         (first (sort (list (lcs l1 (cdr l2) :test test)
                            (lcs (cdr l1) l2 :test test))
-                     (lambda (a b) (> (length a) (length b))))))))
+                     #'> :key #'length)))))
 
 (defun diff (list1 list2 &key (test #'eql))
   "Find the differences between LIST1 and LIST2 using TEST."
