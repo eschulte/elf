@@ -732,6 +732,17 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
+(defvar *max-diff-to-update-headers* 0
+  "Proportion of max difference beyond which header updates aren't reasonable.
+
+Note: This behavior is turned off by default.  Generally this is too
+/fancy/ for use on every data update, in that the `diff' and `deltas'
+algorithms may find complex series of offset to compensate for simple
+edits.  For example, swapping two instructions should not result in
+any re-arranging of the data section, however the above algorithms
+will generally assign an offset to *every* instruction between the two
+swapped instructions.")
+
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
   ;; step through the ordered sections, updating where required
@@ -778,20 +789,32 @@ section (in the file)."
                        (setf (shoff header) (+ (shoff header) d))
                        (setf last (+ (shoff header)
                                      (* (sh-num header)
-                                        (sh-ent-size header)))))))
-                  (setf sec-deltas (cons (cons last d) sec-deltas))))
+                                        (sh-ent-size header))))))))
+                (setf sec-deltas (cons (cons last d) sec-deltas)))
             when chunk collect chunk)))
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (dolist (sym (data (named-section elf ".dynsym")))
-        (with-slots (value) sym
-          (when (> value (+ (offset sec) (size sec)))
-            (setf value (+ value (or (loop for pair in sec-deltas
-                                        do (when (and (numberp (car pair))
-                                                      (> value (car pair)))
-                                             (return (cdr pair))))
-                                     0))))))
+      (let ((ds (unless (= *max-diff-to-update-headers* 0)
+                  (deltas (coerce data 'list) (coerce new 'list)))))
+        ;; heuristic: don't update in-sec symbols if data is too different
+        (when (and ds (> (apply #'+ (remove-if-not #'numberp ds))
+                         (* *max-diff-to-update-headers*
+                            (* new-length old-length))))
+          (setf ds nil))
+        (dolist (sym (data (named-section elf ".dynsym")))
+          (with-slots (value) sym
+            (when (> value (offset sec))
+              (setf value
+                    (+ value (or (if (and (>= value (offset sec))
+                                          (<= value (+ (offset sec) (size sec))))
+                                     ;; inside of the changed section
+                                     (nth (- value (offset sec)) ds)
+                                     ;; after the changed section
+                                     (loop for pair in sec-deltas
+                                        do (when (> value (car pair))
+                                             (return (cdr pair)))))
+                                 0)))))))
       ;; update size and the contents of the section
       (setf (size sec) new-length)
       (set-data new sec))))
