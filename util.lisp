@@ -49,6 +49,7 @@
 ;; The following two functions are adapted from:
 ;; http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings
 (def-memoized-function lcs (l1 l2 &key (test #'eql))
+  ;; TODO: this probably needs to be less greedy
   "Return the longest common sub-list of L1 and L2 using TEST."
   (when (not (or (null l1) (null l2)))
     (if (funcall test (car l1) (car l2))
@@ -80,21 +81,25 @@
     (nreverse result)))
 
 (defun edit-distance (s1 s2)
-  "Return the edit (levenshtein) distance between strings S1 S2."
+  "Return the edits between strings S1 S2."
   (let* ((l1 (length s1)) (l2 (length s2))
-         (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element nil)))
-    (setf (aref d 0 0) 0)
+         (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element :na)))
+    (setf (aref d 0 0) '(:base))
     (loop for i from 1 to l1
        do (loop for j from 1 to l2
              do (setf (aref d i j)
                       (if (eql (aref s1 (1- i)) (aref s2 (1- j)))
                           (aref d (1- i) (1- j))
-                          (1+ (apply #'min
-                                     (remove nil
-                                       (list (aref d (1- i) j)
-                                             (aref d i (1- j))
-                                             (aref d (1- i) (1- j))))))))))
-    (aref d l1 l2)))
+                          (let ((del (cons (cons :del (1- i))
+                                           (aref d (1- i) j)))
+                                (ins (cons (cons :ins (1- i))
+                                           (aref d i (1- j))))
+                                (swp (cons (cons :swp (1- i))
+                                           (aref d (1- i) (1- j)))))
+                            (first (sort (remove :na (list del ins swp)
+                                                 :key #'cdr)
+                                         #'< :key #'length)))))))
+    (cdr (reverse (aref d l1 l2)))))
   
 (defun deltas (list1 list2 &key (test #'eql) &aux (delta 0))
   "Return a list of index offsets for the elements of LIST1."

@@ -115,6 +115,20 @@ Optional argument OUT specifies an output stream."
    (when (probe-file *tmp-file*)
      (delete-file *tmp-file*))))
 
+(deftest test-edit-dist ()
+  (with-fixture hello-elf
+    (let* ((orig (copy-seq (data (named-section *elf* ".text"))))
+           (copy (copy-seq orig))
+           (from (random (length orig)))
+           (to (random (length orig))))
+      ;; swap two instructions
+      (setf (aref copy to) (aref orig from))
+      (setf (aref copy from) (aref orig to))
+      (let ((diff (edit-distance orig copy)))
+        (is (member from (mapcar #'cdr diff)))
+        (is (member to   (mapcar #'cdr diff)))
+        (is (equal-it '(:swp :swp) (mapcar #'car diff)))))))
+
 (deftest test-write-elf (elf path)
   (is (progn (write-elf elf path) (probe-file path))))
 
