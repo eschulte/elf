@@ -80,7 +80,7 @@
       (push (cons :added list2) result))
     (nreverse result)))
 
-(defun edit-distance (s1 s2)
+(defun edits (s1 s2)
   "Return the edits between strings S1 S2."
   (let* ((l1 (length s1)) (l2 (length s2))
          (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element :na)))
@@ -100,6 +100,10 @@
                                                  :key #'cdr)
                                          #'< :key #'length)))))))
     (cdr (reverse (aref d l1 l2)))))
+
+(defun edit-distance (s1 s2)
+  "Return the edit distance between vectors S1 and S2."
+  (length (edits s1 s2)))
   
 (defun deltas (list1 list2 &key (test #'eql) &aux (delta 0))
   "Return a list of index offsets for the elements of LIST1."
