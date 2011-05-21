@@ -124,10 +124,10 @@ Optional argument OUT specifies an output stream."
       ;; swap two instructions
       (setf (aref copy to) (aref orig from))
       (setf (aref copy from) (aref orig to))
-      (let ((diff (edit-distance orig copy)))
-        (is (member from (mapcar #'cdr diff)))
-        (is (member to   (mapcar #'cdr diff)))
-        (is (equal-it '(:swp :swp) (mapcar #'car diff)))))))
+      (let ((edits (edits orig copy)))
+        (is (member from (mapcar #'cdr edits)))
+        (is (member to   (mapcar #'cdr edits)))
+        (is (equal-it '(:swp :swp) (mapcar #'car edits)))))))
 
 (deftest test-write-elf (elf path)
   (is (progn (write-elf elf path) (probe-file path))))
@@ -190,15 +190,15 @@ Optional argument OUT specifies an output stream."
       (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
       (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
 
-(deftest test-perniciously-long-data-setf-changes ()
+(deftest test-perniciously-long-edit-distance ()
   (let ((*test-class* :64-bit))
     (with-fixture hello-elf
       (let ((text (data (named-section *elf* ".text"))))
         (is (not (equal
                   :timeout
                   (handler-case
-                      (with-timeout (0.5)
-                        (lcs (coerce text 'list) (reverse (coerce text 'list))))
+                      (with-timeout (1)
+                        (edits text (reverse text)))
                     (timeout-error (c) (declare (ignorable c)) :timeout)))))))))
 
 (deftest test-objdump ()
