@@ -47,7 +47,7 @@
     (return nil)))
 
 (defun edits (s1 s2)
-  "Return the edits between strings S1 S2."
+  "Return the edits between vectors S1 S2."
   (let* ((l1 (length s1)) (l2 (length s2))
          (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element :na)))
     (setf (aref d 0 0) '(:base))
@@ -70,6 +70,15 @@
 (defun edit-distance (s1 s2)
   "Return the edit distance between vectors S1 and S2."
   (length (edits s1 s2)))
+
+(defun deltas (s1 s2 &aux (offset 0) op)
+  "∀ place in S1, return its offset in S2."
+  (let ((edits (edits s1 s2)))
+    (loop for place upto (length s1)
+       do (loop while (setf op (rassoc place edits))
+             do (incf offset (case (car op) (:del -1) (:ins 1) (:swp 0)))
+             do (setf edits (remove op edits)))
+       collect offset)))
 
 (defun my-slot-definition-name (el)
   #+sbcl
