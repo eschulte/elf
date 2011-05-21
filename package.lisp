@@ -10,6 +10,8 @@
    :trivial-shell
    :cl-ppcre)
   (:export
+   ;; dynamic variables
+   :*calculate-edits*
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
@@ -25,4 +27,7 @@
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class
-   :header :section-table :program-table :sections :ordering))
+   :header :section-table :program-table :sections :ordering
+   ;; edit distance
+   :edits :deltas
+   ))
