@@ -10,7 +10,8 @@ and write elf files.
 
 See file:ELF.txt (in this directory) for more information on the elf
 format.  Much of the code in =elf.lisp= is a direct translation of the
-elf data structures described in the =ELF.txt= document.
+elf data structures described in the =ELF.txt= document augmented with
+specific information translated from file:/usr/include/elf.h.
 
 * Example Usage
   :PROPERTIES:
