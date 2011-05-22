@@ -732,7 +732,8 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
-(defvar *calculate-edits* nil)
+(defvar *calculate-edits* t
+  "Should shortest edit string be calculated during updates to binary data sections.")
 
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
