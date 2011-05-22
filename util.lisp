@@ -67,6 +67,32 @@
                                          #'< :key #'length)))))))
     (cdr (reverse (aref d l1 l2)))))
 
+(defun alt-edits (original modified &aux queue mins)
+  (let ((l1 (length original))  (l2 (length modified)))
+    (flet ((check (i j type base)
+             (when (and (< i l1) (< j l2))
+               (let ((new (list i j
+                                (if (eql (aref original i) (aref modified j))
+                                    base
+                                    (cons (cons type i) base)))))
+                 (if (and (= i (1- l1)) (= j (1- l2)))
+                     (return-from alt-edits (third new))
+                     (push new queue))))))
+      (check 0 0 :swap nil)
+      (do () ()
+        (setf queue (sort queue #'< :key (lambda (el) (length (third el)))))
+        (let ((min (length (third (first queue)))))
+          (setf mins nil)
+          (do () ((or (emptyp queue)
+                      (not (= min (length (third (first queue)))))))
+            (push (pop queue) mins)))
+        (mapc (lambda-bind ((i j base))
+                (check (1+ i)     j  :delete base)
+                (check     i  (1+ j) :insert base)
+                (check (1+ i) (1+ j) :swap   base))
+              mins))
+      queue)))
+
 (defun edit-distance (s1 s2)
   "Return the edit distance between vectors S1 and S2."
   (length (edits s1 s2)))
