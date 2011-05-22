@@ -39,12 +39,15 @@
 (defun deltas (s1 s2 &aux (offset 0))
   "∀ place in S1, return its offset in S2."
   (coerce
-   (apply #'append (mapcar (lambda (region)
-                             (prog1 (make-sequence 'list (original-length region)
-                                                   :initial-element offset)
-                               (incf offset (- (modified-length region)
-                                               (original-length region)))))
-                           (compute-raw-diff s1 s2)))
+   (apply #'append
+          (mapcar
+           (lambda (region)
+             (prog1 (make-sequence 'list (original-length region)
+                                   :initial-element offset)
+               (incf offset (- (modified-length region)
+                               (original-length region)))))
+           (apply #'compute-raw-diff
+                  (mapcar (lambda (l) (coerce l 'simple-vector)) (list s1 s2)))))
    'vector))
 
 (defun my-slot-definition-name (el)
