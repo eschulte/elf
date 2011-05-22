@@ -36,85 +36,16 @@
   (loop for el in sequence as n from 0
      collect (list n el)))
 
-(defun subseq-of (sub seq &key (start 0))
-  "If SUB is a occurs in SEQ, return the index at which is appears."
-  (block nil
-    (mapcon (lambda (seq)
-              (when (starts-with-subseq sub seq)
-                (return start))
-              (incf start))
-            (coerce (subseq seq start) 'list))
-    (return nil)))
-
-(defun edits (s1 s2)
-  "Return the edits between vectors S1 S2."
-  (let* ((l1 (length s1)) (l2 (length s2))
-         (d (make-array (mapcar #'1+ (list l1 l2)) :initial-element :na)))
-    (setf (aref d 0 0) '(:base))
-    (loop for i from 1 to l1
-       do (loop for j from 1 to l2
-             do (setf (aref d i j)
-                      (if (eql (aref s1 (1- i)) (aref s2 (1- j)))
-                          (aref d (1- i) (1- j))
-                          (let ((del (cons (cons :del (1- i))
-                                           (aref d (1- i) j)))
-                                (ins (cons (cons :ins (1- i))
-                                           (aref d i (1- j))))
-                                (swp (cons (cons :swp (1- i))
-                                           (aref d (1- i) (1- j)))))
-                            (first (sort (remove :na (list del ins swp)
-                                                 :key #'cdr)
-                                         #'< :key #'length)))))))
-    (cdr (reverse (aref d l1 l2)))))
-
-(defun smallest (lst predicate &key (key #'identity) (test #'eql) &aux results)
-  "Return a list of the smallest elements of list"
-  (let* ((sorted   (sort lst predicate :key key))
-         (smallest (funcall key (first sorted))))
-    (dolist (el sorted)
-      (if (funcall test smallest (funcall key el))
-          (push el results)
-          (return))))
-  results)
-
-(defun alt-edits (original modified)
-  (let ((l1 (length original))  (l2 (length modified)))
-    (labels ((check (i j type base)
-               (when (and (< i l1) (< j l2) (>= i 0) (>= j 0))
-                 (let ((res (if (eql (aref original i) (aref modified j))
-                                base
-                                (cons (cons type i) base))))
-                   (if (and (= i (1- l1)) (= j (1- l2)))
-                       (return-from alt-edits res)
-                       (list i j res)))))
-             (step (queue)
-               (let ((smallest (length (third (first queue)))))
-                 (step (remove nil
-                         (sort (apply #'append
-                                      (mapcar
-                                       (lambda-bind ((i j base))
-                                         (if (= smallest (length base))
-                                             (list
-                                              (check (1+ i)     j  :delete base)
-                                              (check     i  (1+ j) :insert base)
-                                              (check (1+ i) (1+ j) :swap   base))
-                                             (list (list i j base))))
-                                       queue))
-                               #'< :key (lambda (point) (length (third point)))))))))
-      (step '((-1 -1 nil))))))
-
-(defun edit-distance (s1 s2)
-  "Return the edit distance between vectors S1 and S2."
-  (length (edits s1 s2)))
-
-(defun deltas (s1 s2 &aux (offset 0) op)
+(defun deltas (s1 s2 &aux (offset 0))
   "∀ place in S1, return its offset in S2."
-  (let ((edits (edits s1 s2)))
-    (loop for place upto (length s1)
-       do (loop while (setf op (rassoc place edits))
-             do (incf offset (case (car op) (:del -1) (:ins 1) (:swp 0)))
-             do (setf edits (remove op edits)))
-       collect offset)))
+  (coerce
+   (apply #'append (mapcar (lambda (region)
+                             (prog1 (make-sequence 'list (original-length region)
+                                                   :initial-element offset)
+                               (incf offset (- (modified-length region)
+                                               (original-length region)))))
+                           (compute-raw-diff s1 s2)))
+   'vector))
 
 (defun my-slot-definition-name (el)
   #+sbcl

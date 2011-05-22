@@ -8,7 +8,9 @@
    :metabang-bind
    :split-sequence
    :trivial-shell
-   :cl-ppcre)
+   :cl-ppcre
+   :diff ;; <- from http://github.com/froydnj/diff
+   )
   (:export
    ;; dynamic variables
    :*calculate-edits*
@@ -28,6 +30,4 @@
    :elf :sh :ph :name :data
    ;; elf class
    :header :section-table :program-table :sections :ordering
-   ;; edit distance
-   :edits :deltas
    ))
