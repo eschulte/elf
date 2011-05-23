@@ -875,6 +875,9 @@ section (in the file)."
               (let ((d (cdar sec-deltas)))
                 (when (and last (> d 0))
                   (cond
+                    ;; TODO: when .got or .got.plt sections move, the
+                    ;; related offsets in relocation sections will
+                    ;; need to be updated
                     ((stringp chunk)      ; section
                      (let ((sec (named-section elf chunk)))
                        (when (not (zerop (address sh)))
