@@ -533,6 +533,20 @@
     (:64-bit 'elf-sym-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+(defun name-symbols (sec)
+  "Assign names to the symbols contained in SEC."
+  (when (member (type sec) '(:symtab :dynsym))
+    (with-slots (elf sh type) sec
+      (let* ((name-sec (nth (link sh) (sections elf)))
+             (tab (coerce (data name-sec) 'list)))
+        (mapcar (lambda (sym)
+                  (setf (sym-name sym)
+                        (coerce (loop for code in (subseq tab (name sym))
+                                   until (equal code 0)
+                                   collect (code-char code))
+                                'string)))
+                (data sec))))))
+
 (defclass elf-dyn () ())
 
 (define-binary-class elf-dyn-32 (elf-dyn)
@@ -762,15 +776,11 @@ section (in the file)."
                                  acc)
                          (cons part acc)))))
                (cdr parts) :initial-value (list (car parts))))))))))
-    ;; initialize symbol names in .symtab
-    (let ((tab (coerce (data (named-section e ".strtab")) 'list)))
-      (mapcar (lambda (sym)
-                (setf (sym-name sym)
-                      (coerce (loop for code in (subseq tab (name sym))
-                                 until (equal code 0)
-                                 collect (code-char code))
-                              'string)))
-              (data (named-section e ".symtab"))))
+    ;; initialize symbol names in .symtab and .dynsym
+    (mapcar #'name-symbols
+            (remove nil
+              (mapcar (lambda (name) (named-section e name))
+                      '(".symtab" ".dynsym"))))
     e))
 
 (defmethod write-value ((type (eql 'elf)) out value &key)
