@@ -958,19 +958,19 @@ section (in the file)."
 (defun show-rel (elf)
   "Print information on the symbols stored in a relocatable section.
 Note: the output should resemble the output of readelf -r."
-  (let ((sec-fmt "~&Relocation section '~a' at offset 0x~x contains ~a entries:")
-        (rel-hd  "~&  Offset          Info        Type       Sym. Name")
-        (rel-fmt "~&~12,'0x ~12,'0x ~12:@<~a~> ~12:@<~a~>"))
+  (let ((sec-f "~&~%Relocation section '~a' at offset 0x~x contains ~a entries:")
+        (rel-h "~&  Offset          Info        Type       Sym. Name")
+        (rel-f "~&~12,'0x ~12,'0x ~12:@<~a~> ~12:@<~a~>"))
     (with-slots (header) elf
       (dolist (sec (sections elf))
         (when (member (type sec) '(:rel :rela))
           (with-slots (sh name data) sec
             (let ((syms (data (nth 5 (sections elf)))))
-              (format t sec-fmt name (offset sh) (length data))
-              (format t rel-hd)
+              (format t sec-f name (offset sh) (length data))
+              (format t rel-h)
               (mapcar
                (lambda (rel) ;; offset info type sym.name
-                 (format t rel-fmt
+                 (format t rel-f
                          (offset rel)
                          (info rel)
                          (rel-type rel header)
