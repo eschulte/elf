@@ -912,21 +912,21 @@ section (in the file)."
       (let ((ds (if *calculate-edits*
                     (deltas data new)
                     (make-sequence 'list (length data) :initial-element 0))))
-        (flet ((update (ad)
-                 (when (and ad (> ad (offset sec)))
-                   (setf ad
-                         (+ ad
-                            (if (and (>= ad (offset sec))
-                                     (<= ad (+ (offset sec) (size sec))))
-                                ;; inside of the changed section
-                                (aref ds (- ad (offset sec)))
-                                ;; after the changed section
-                                (or (cdr (assoc-if (lambda (p) (> ad p)) sec-deltas))
-                                    0)))))))
-          (mapcar #'update
-                  (mapcar #'value (data (named-section elf ".dynsym"))))
-          (mapcar #'update
-                  (mapcar #'ptr (data (named-section elf ".dynamic"))))))
+        (flet ((adj (address)
+                 (+ address
+                    (if (and (>= address (offset sec))
+                             (<= address (+ (offset sec) (size sec))))
+                        ;; inside of the changed section
+                        (aref ds (- address (offset sec)))
+                        ;; after the changed section
+                        (or (cdr (assoc-if (lambda (p) (> address p)) sec-deltas))
+                            0)))))
+          (dolist (sym (data (named-section elf ".dynsym")))
+            (with-slots (value) sym
+              (setf value (adj value))))
+          (dolist (dynsym (data (named-section elf ".dynamic")))
+            (when (ptr dynsym)
+              (setf (ptr dynsym) (adj (ptr dynsym)))))))
       ;; update size and the contents of the section
       (setf (size sec) new-length)
       (set-data new sec))))
