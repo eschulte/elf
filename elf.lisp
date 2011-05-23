@@ -913,7 +913,7 @@ section (in the file)."
                     (deltas data new)
                     (make-sequence 'list (length data) :initial-element 0))))
         (flet ((update (ad)
-                 (when (> ad (offset sec))
+                 (when (and ad (> ad (offset sec)))
                    (setf ad
                          (+ ad
                             (if (and (>= ad (offset sec))
