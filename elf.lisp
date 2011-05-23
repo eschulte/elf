@@ -921,6 +921,7 @@ section (in the file)."
                         ;; after the changed section
                         (or (cdr (assoc-if (lambda (p) (> address p)) sec-deltas))
                             0)))))
+          ;; TODO: check that these changes to ever /cause/ execution errors
           (dolist (sym (data (named-section elf ".dynsym")))
             (with-slots (value) sym
               (setf value (adj value))))
