@@ -852,7 +852,7 @@ section (in the file)."
     e))
 
 (defvar *calculate-edits* t
-  "Should shortest edit string be calculated during updates to binary data sections.")
+  "Should the edit string be calculated during updates to binary data sections.")
 
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
@@ -912,18 +912,21 @@ section (in the file)."
       (let ((ds (if *calculate-edits*
                     (deltas data new)
                     (make-sequence 'list (length data) :initial-element 0))))
-        (dolist (sym (data (named-section elf ".dynsym")))
-          (with-slots (value) sym
-            (when (> value (offset sec))
-              (setf value
-                    (+ value
-                       (if (and (>= value (offset sec))
-                                (<= value (+ (offset sec) (size sec))))
-                           ;; inside of the changed section
-                           (aref ds (- value (offset sec)))
-                           ;; after the changed section
-                           (or (cdr (assoc-if (lambda (p) (> value p)) sec-deltas))
-                               0))))))))
+        (flet ((update (ad)
+                 (when (> ad (offset sec))
+                   (setf ad
+                         (+ ad
+                            (if (and (>= ad (offset sec))
+                                     (<= ad (+ (offset sec) (size sec))))
+                                ;; inside of the changed section
+                                (aref ds (- ad (offset sec)))
+                                ;; after the changed section
+                                (or (cdr (assoc-if (lambda (p) (> ad p)) sec-deltas))
+                                    0)))))))
+          (mapcar #'update
+                  (mapcar #'value (data (named-section elf ".dynsym"))))
+          (mapcar #'update
+                  (mapcar #'ptr (data (named-section elf ".dynamic"))))))
       ;; update size and the contents of the section
       (setf (size sec) new-length)
       (set-data new sec))))
