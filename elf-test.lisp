@@ -115,20 +115,6 @@ Optional argument OUT specifies an output stream."
    (when (probe-file *tmp-file*)
      (delete-file *tmp-file*))))
 
-(deftest test-edit-dist ()
-  (with-fixture hello-elf
-    (let* ((orig (copy-seq (data (named-section *elf* ".text"))))
-           (copy (copy-seq orig))
-           (from (random (length orig)))
-           (to (random (length orig))))
-      ;; swap two instructions
-      (setf (aref copy to) (aref orig from))
-      (setf (aref copy from) (aref orig to))
-      (let ((edits (edits orig copy)))
-        (is (member from (mapcar #'cdr edits)))
-        (is (member to   (mapcar #'cdr edits)))
-        (is (equal-it '(:swp :swp) (mapcar #'car edits)))))))
-
 (deftest test-write-elf (elf path)
   (is (progn (write-elf elf path) (probe-file path))))
 
@@ -189,17 +175,6 @@ Optional argument OUT specifies an output stream."
     (let ((first-data (copy-seq (data (named-section *elf* ".text")))))
       (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
       (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
-
-(deftest test-perniciously-long-edit-distance ()
-  (let ((*test-class* :64-bit))
-    (with-fixture hello-elf
-      (let ((text (data (named-section *elf* ".text"))))
-        (is (not (equal
-                  :timeout
-                  (handler-case
-                      (with-timeout (1)
-                        (edits text (reverse text)))
-                    (timeout-error (c) (declare (ignorable c)) :timeout)))))))))
 
 (deftest test-objdump ()
   (with-fixture hello-elf
