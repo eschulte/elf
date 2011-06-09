@@ -55,7 +55,9 @@
   (sb-mop::slot-definition-name el)
   #+ccl
   (ccl:slot-definition-name el)
-  #-(or sbcl ccl)
+  #+ecl
+  (error "ECL does not support `my-slot-definition-name'")
+  #-(or sbcl ccl ecl)
   (#'clos::slot-definition-name el))
 
 (defun my-class-slots (el)
@@ -63,7 +65,9 @@
   (sb-mop::class-slots el)
   #+ccl
   (ccl:class-slots el)
-  #-(or sbcl ccl)
+  #+ecl
+  (error "ECL does not support `my-class-slots'")
+  #-(or sbcl ccl ecl)
   (clos::class-slots el))
 
 (defun mapslots (func obj)

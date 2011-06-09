@@ -28,6 +28,9 @@
 (when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
 #+sbcl
 (unlock-package :common-lisp)
+#+ecl
+(ext:package-lock :common-lisp nil)
+
 (in-package #:elf)
 
 
@@ -1079,8 +1082,9 @@ Note: the output should resemble the output of readelf -r."
   (let ((path (temp-file-name)))
     (write-elf (elf sec) path)
     (unwind-protect
-         (shell-command (format nil "objdump -j ~a -d ~a" (name sec) path))
-      (delete-file path))))
+         #-ecl (shell-command (format nil "objdump -j ~a -d ~a" (name sec) path))
+         #+ecl (ext:system    (format nil "objdump -j ~a -d ~a" (name sec) path))
+         (delete-file path))))
 
 (defun parse-addresses (lines)
   "Parse addresses from lines of objdump output."

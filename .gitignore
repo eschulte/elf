@@ -5,6 +5,7 @@ hello3
 hello.out
 
 ## exported/compiled files
+*.fas
 *.fasl
 *.lx32fsl
 *.lx64fsl

@@ -10,7 +10,7 @@
                com.gigamonkeys.binary-data
                metabang-bind
                split-sequence
-               trivial-shell
+               #-ecl trivial-shell
                cl-ppcre
                diff ;; <- from http://github.com/froydnj/diff
                )
