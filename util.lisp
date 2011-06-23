@@ -95,13 +95,20 @@
          new))
       (t (error "~&don't know how to copy ~a" obj)))))
 
+#+sbcl
+(locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+  (sb-alien:define-alien-routine (#-win32 "tempnam" #+win32 "_tempnam" tempnam)
+      sb-alien:c-string
+    (dir sb-alien:c-string)
+    (prefix sb-alien:c-string)))
+
 (defun temp-file-name ()
   #+clisp
   (let ((stream (gensym)))
     (eval `(with-open-stream (,stream (ext:mkstemp nil))
              (pathname ,stream))))
   #+sbcl
-  (swank-backend::temp-file-name)
+  (tempnam nil nil)
   #+ccl
   (ccl:temp-pathname)
   #-(or sbcl clisp ccl)
