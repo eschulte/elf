@@ -23,13 +23,6 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
-;; required so that :com.gigamonkeys.binary-data can change :common-lisp stuff
-#+clisp
-(when (ext:package-lock :common-lisp) (setf (ext:package-lock :common-lisp) nil))
-#+sbcl
-(unlock-package :common-lisp)
-#+ecl
-(ext:package-lock :common-lisp nil)
 
 (in-package #:elf)
 

@@ -11,6 +11,10 @@
    :cl-ppcre
    :diff ;; <- from http://github.com/froydnj/diff
    )
+  (:shadow
+   :class
+   :get
+   :type)
   (:export
    ;; dynamic variables
    :*calculate-edits*
