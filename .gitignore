@@ -12,6 +12,7 @@ hello.out
 elf.html
 elf.pdf
 elf.tex
+libelf-mono.a
 
 ## scratch buffer
 scratch.lisp
