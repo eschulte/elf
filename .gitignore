@@ -6,6 +6,10 @@ hello.out
 
 ## exported/compiled files
 *.c
+*.data
+*.eclh
+*.o
+*.so
 *.fas
 *.fasl
 *.lx32fsl
