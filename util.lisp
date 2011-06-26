@@ -121,7 +121,7 @@
 
 (defmacro lambda-registers (registers regexp &body body)
   "Create a function over the register matches using `register-groups-bind'."
-  (with-gensyms (string)
+  (let ((string (gensym)))
     `(lambda (,string)
        (register-groups-bind ,registers (,regexp ,string)
          ,@body))))
