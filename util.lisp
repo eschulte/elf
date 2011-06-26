@@ -37,7 +37,7 @@
      collect (list n el)))
 
 (defun deltas (s1 s2 &aux (offset 0))
-  "∀ place in S1, return its offset in S2."
+  "for every place in S1, return its offset in S2."
   (coerce
    (apply #'append
           (mapcar
