@@ -55,9 +55,7 @@
   (sb-mop::slot-definition-name el)
   #+ccl
   (ccl:slot-definition-name el)
-  #+ecl
-  (error "ECL does not support `my-slot-definition-name'")
-  #-(or sbcl ccl ecl)
+  #-(or sbcl ccl)
   (clos::slot-definition-name el))
 
 (defun my-class-slots (el)
@@ -65,9 +63,7 @@
   (sb-mop::class-slots el)
   #+ccl
   (ccl:class-slots el)
-  #+ecl
-  (error "ECL does not support `my-class-slots'")
-  #-(or sbcl ccl ecl)
+  #-(or sbcl ccl)
   (clos::class-slots el))
 
 (defun mapslots (func obj)
@@ -111,6 +107,8 @@
   (tempnam nil nil)
   #+ccl
   (ccl:temp-pathname)
+  #+ecl
+  (si::mkstemp "TMP:elf")
   #-(or sbcl clisp ccl)
   (error "no temporary file backend for this lisp."))
 
