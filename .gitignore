@@ -17,7 +17,7 @@ hello.out
 elf.html
 elf.pdf
 elf.tex
-libelf-mono.a
+run-test
 
 ## scratch buffer
 scratch.lisp
