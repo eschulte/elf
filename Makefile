@@ -1,6 +1,6 @@
 CC=gcc
 HERE=$(shell pwd)
-LD_LIBRARY_PATH=$(HERE)
+LD_LIBRARY_PATH:=$(HERE)
 
 all: elf.c
 
