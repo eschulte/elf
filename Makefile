@@ -2,7 +2,7 @@ CC=gcc
 HERE=$(shell pwd)
 LD_LIBRARY_PATH:=$(HERE)
 
-all: elf.c
+all: libelf.so
 
 libelf.so: elf.lisp ecl-build.lisp
 	ecl -norc -shell ecl-build.lisp
