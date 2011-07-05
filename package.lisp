@@ -22,7 +22,6 @@
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
-   :update-text
    ;; disassembly functions
    :objdump :parse-addresses :objdump-parse
    ;; methods

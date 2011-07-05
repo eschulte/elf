@@ -928,10 +928,6 @@ section (in the file)."
       (setf (size sec) new-length)
       (set-data new sec))))
 
-(defun update-text (elf new)
-  "Update the contents of section the .text section of elf."
-  (setf (data (named-section elf ".text")) new))
-
 
 ;;; Misc functions
 (defun named-section (elf name)
