@@ -928,6 +928,10 @@ section (in the file)."
       (setf (size sec) new-length)
       (set-data new sec))))
 
+(defun update-data (new sec)
+  "Wrapper because setf is difficult to call from C."
+  (setf (data sec) new))
+
 
 ;;; Misc functions
 (defun named-section (elf name)
