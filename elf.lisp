@@ -931,7 +931,7 @@ section (in the file)."
 
 (defun update-data (new sec)
   "Wrapper because setf is difficult to call from C."
-  (setf (data sec) new))
+  (ignore-errors (setf (data sec) new)))
 
 
 ;;; Misc functions
