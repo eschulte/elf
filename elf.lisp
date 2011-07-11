@@ -915,7 +915,7 @@ section (in the file)."
                         ;; inside of the changed section
                         (aref ds (- address (offset sec)))
                         ;; after the changed section
-                        (or (cdr (assoc-if (lambda (p) (> address p)) sec-deltas))
+                        (or (cdr (assoc-if (lambda (p) (and p (> address p))) sec-deltas))
                             0)))))
           ;; TODO: check that these changes to ever /cause/ execution errors
           (dolist (sym (data (named-section elf ".dynsym")))
