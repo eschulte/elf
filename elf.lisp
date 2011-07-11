@@ -907,13 +907,14 @@ section (in the file)."
       ;; update the dynamic symbols used at run time
       (let ((ds (if *calculate-edits*
                     (deltas data new)
-                    (make-sequence 'list (length data) :initial-element 0))))
+                    (make-sequence 'list (length data) :initial-element 0)))
+            (offset (offset sec))
+            (size (size sec)))
         (flet ((adj (address)
                  (+ address
-                    (if (and (>= address (offset sec))
-                             (<= address (+ (offset sec) (size sec))))
+                    (if (and (>= address offset) (<= address (+ offset size)))
                         ;; inside of the changed section
-                        (aref ds (- address (offset sec)))
+                        (aref ds (- address offset))
                         ;; after the changed section
                         (or (cdr (assoc-if (lambda (p) (and p (> address p))) sec-deltas))
                             0)))))
