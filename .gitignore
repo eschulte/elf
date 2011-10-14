@@ -9,6 +9,8 @@ hello.out
 *.fasl
 *.lx32fsl
 *.lx64fsl
+*.o
+*.so
 elf.html
 elf.pdf
 elf.tex
