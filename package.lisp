@@ -25,7 +25,7 @@
    ;; disassembly functions
    :objdump :parse-addresses :objdump-parse
    ;; methods
-   :un-type :ptr  :val :binding :type :offset  :vma 
+   :un-type :ptr  :val :binding :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
    :filesz :memsz :align :sym-name :other :value :shndx :disasm
