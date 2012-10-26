@@ -4,11 +4,10 @@
 #+STYLE: <link rel="stylesheet" href="/~eschulte/stylesheet.css" type="text/css">
 
 * ELF
-=elf.lisp= ([[http://gitweb.adaptive.cs.unm.edu/elf.git/blob_plain/HEAD:/elf.lisp][elf.lisp], [[http://gitweb.adaptive.cs.unm.edu/elf.git][elf.git]]) is a common lisp library for the
-manipulation of ELF files, which can be used to read, inspect, modify
-and write elf files.
+[[https://github.com/eschulte/elf/blob/master/elf.lisp][elf.lisp]] is a common lisp library for the manipulation of ELF files,
+which can be used to read, inspect, modify and write elf files.
 
-See [[http://gitweb.adaptive.cs.unm.edu/elf.git/blob_plain/HEAD:/ELF.txt][ELF.txt]] for more information on the elf format.  Much of the code
+See [[https://github.com/eschulte/elf/blob/master/ELF.txt][ELF.txt]] for more information on the elf format.  Much of the code
 in =elf.lisp= is a direct translation of the elf data structures
 described in the =ELF.txt= document augmented with specific
 information translated from file:/usr/include/elf.h.
