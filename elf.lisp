@@ -847,9 +847,6 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
-(defvar *calculate-edits* t
-  "Should the edit string be calculated during updates to binary data sections.")
-
 (defmethod (setf data) (new (sec section))
   "Update the contents of section to new, and update all headers appropriately."
   ;; step through the ordered sections, updating where required
@@ -905,9 +902,7 @@ section (in the file)."
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (let ((ds (if *calculate-edits*
-                    (deltas data new)
-                    (make-sequence 'list (length data) :initial-element 0))))
+      (let ((ds (make-sequence 'list (length data) :initial-element 0)))
         (flet ((adj (address)
                  (+ address
                     (if (and (>= address (offset sec))

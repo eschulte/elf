@@ -12,7 +12,6 @@
                split-sequence
                #-ecl trivial-shell
                cl-ppcre
-               diff ;; <- from http://github.com/froydnj/diff
                )
   :components ((:file "package")
                (:file "util"

@@ -9,7 +9,6 @@
    :split-sequence
    #-ecl :trivial-shell
    :cl-ppcre
-   :diff ;; <- from http://github.com/froydnj/diff
    )
   (:shadow
    :class
