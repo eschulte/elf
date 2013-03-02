@@ -409,7 +409,7 @@
 
 (defmethod rel-sym ((rel elf-rel))
   (ash (info rel)
-       (case (class-name (class-of rel))
+       (ecase (class-name (class-of rel))
          ((elf-rel-32 elf-rela-32) -8)
          ((elf-rel-64 elf-rela-64) -32))))
 
@@ -473,7 +473,7 @@
 (defmethod rel-type ((rel elf-rel) (header elf-header))
   "The interpretation of the type is machine specific."
   (let ((val (logand (info rel)
-                     (case (class-name (class-of rel))
+                     (ecase (class-name (class-of rel))
                        ((elf-rel-32 elf-rela-32) #xff)
                        ((elf-rel-64 elf-rela-64) #xffffffff)))))
     (flet ((get (item lst) (cdr (assoc item lst))))
