@@ -902,7 +902,7 @@ section (in the file)."
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
-      (let ((ds (make-sequence 'list (length data) :initial-element 0)))
+      (let ((ds (make-array (length data) :initial-element 0)))
         (flet ((adj (address)
                  (+ address
                     (if (and (>= address (offset sec))
