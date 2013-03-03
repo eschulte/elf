@@ -1,0 +1,26 @@
+#!/usr/bin/sbcl --script
+;; -*- lisp -*-
+(load "~/.sbclrc" :if-does-not-exist nil)
+(require :schulte-documentation-template)
+(require :alexandria)
+(defvar *pkg-name* (string-downcase (second sb-ext:*posix-argv*)))
+(defvar *pkg* (read-from-string (concatenate 'string ":" *pkg-name*)))
+(require *pkg-name*)
+
+(defvar *subtitles*
+  '((:elf . "A Common Lisp library for manipulating ELF files")))
+
+(defvar *sources*
+  '((:elf . "http://github.com/eschulte/elf")))
+
+(defvar *abstracts*
+  '((:elf .
+     "ELF is a common lisp library for the manipulation of ELF files,
+     which can be used to read, inspect, modify and write elf files.")))
+
+(schulte-documentation-template:create-template *pkg*
+ :maybe-skip-methods-p t
+ :target (concatenate 'string *pkg-name* ".pre")
+ :subtitle (cdr (assoc *pkg* *subtitles*))
+ :abstract (cdr (assoc *pkg* *abstracts*))
+ :source   (cdr (assoc *pkg* *sources*)))
