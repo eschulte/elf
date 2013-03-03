@@ -6,7 +6,7 @@
 
 ;;; Commentary
 
-;; See [ELF.txt](.ELF.txt) for more information on the elf format.
+;; See [ELF.txt](ELF.txt) for more information on the elf format.
 ;; Much of the code in `elf.lisp` is a direct translation of the elf
 ;; data structures described in the ELF.txt document augmented with
 ;; specific information translated from `/usr/include/elf.h`.
@@ -31,7 +31,7 @@
 ;; We can check that this is indeed an elf file by checking the magic
 ;; number at the start of the file.
 ;;
-;;   (elf-p "hello") ; => T
+;;     (elf-p "hello") ; => T
 ;;
 ;; read an elf object, and view it's header information 
 ;; ----------------------------------------------------
