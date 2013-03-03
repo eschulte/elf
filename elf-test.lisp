@@ -36,8 +36,13 @@
     out))
 
 (defun run-elf-tests ()
-  (let ((*test-class* :32-bit)) (elf-test))
-  (let ((*test-class* :64-bit)) (elf-test)))
+  (let ((*test-class* :32-bit)) (test))
+  (let ((*test-class* :64-bit)) (test)))
+
+(defun system-class ()
+  (ecase (parse-integer (shell-command "getconf LONG_BIT"))
+    (32 :32-bit)
+    (64 :64-bit)))
 
 
 ;;; tests which run
@@ -66,10 +71,10 @@
   (with-fixture hello-elf
     (test-write-elf *elf* *tmp-file*)
     (is (probe-file *tmp-file*))
-    (is #+ccl t ;; can't run this shell in ccl
-        #-ccl (progn
-                (shell-command (format nil "chmod +x ~a" *tmp-file*))
-                (equal "hello world" (car (shell-command *tmp-file*)))))))
+    #-ccl
+    (when (equal (system-class) *test-class*)
+      (shell-command (format nil "chmod +x ~a" *tmp-file*))
+      (is (equal "hello world" (trim (shell-command *tmp-file*)))))))
 
 (deftest test-tweaked-text-working-executable ()
   (with-fixture hello-elf
@@ -77,10 +82,10 @@
     (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
     (test-write-elf *elf* *tmp-file*)
     (is (probe-file *tmp-file*))
-    (is #+ccl t ;; can't run this shell in ccl
-        #-ccl (progn
-                (shell-command (format nil "chmod +x ~a" *tmp-file*))
-                (equal "hello world" (car (shell-command *tmp-file*)))))))
+    #-ccl
+    (when (equal (system-class) *test-class*)
+      (shell-command (format nil "chmod +x ~a" *tmp-file*))
+      (is (equal "hello world" (trim (shell-command *tmp-file*)))))))
 
 (deftest test-data-setf-changes ()
   (with-fixture hello-elf

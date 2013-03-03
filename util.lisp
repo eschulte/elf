@@ -33,7 +33,7 @@
   #-(or sbcl clisp ccl)
   (error "no temporary file backend for this lisp."))
 
-(defun trim (str &key (chars '(#\Space #\Tab)))
+(defun trim (str &key (chars '(#\Space #\Tab #\Newline)))
   (loop until (or (emptyp str) (not (member (aref str 0) chars)))
      do (setf str (subseq str 1)))
   (loop until (or (emptyp str) (not (member (aref str (1- (length str))) chars)))
