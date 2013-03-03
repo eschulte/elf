@@ -1,0 +1,2242 @@
+<html> 
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>ELF - A Common Lisp library for manipulating ELF files</title>
+  <style type="text/css">
+  pre { padding:5px; background-color:#e0e0e0 }
+  h3, h4 { text-decoration: underline; }
+  a { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:visited { text-decoration: none; padding: 1px 2px 1px 2px; }
+  a:hover { text-decoration: none; padding: 1px 1px 1px 1px; border: 1px solid #000000; } 
+  a:focus { text-decoration: none; padding: 1px 2px 1px 2px; border: none; }
+  a.none { text-decoration: none; padding: 0; }
+  a.none:visited { text-decoration: none; padding: 0; } 
+  a.none:hover { text-decoration: none; border: none; padding: 0; } 
+  a.none:focus { text-decoration: none; border: none; padding: 0; } 
+  a.noborder { text-decoration: none; padding: 0; } 
+  a.noborder:visited { text-decoration: none; padding: 0; } 
+  a.noborder:hover { text-decoration: none; border: none; padding: 0; } 
+  a.noborder:focus { text-decoration: none; border: none; padding: 0; }  
+  pre.none { padding:5px; background-color:#ffffff }
+  </style>
+</head>
+
+<body bgcolor=white>
+
+<h2> ELF - A Common Lisp library for manipulating ELF files</h2>
+
+<br>&nbsp;<br><h3><a name=abstract class=none>Abstract</a></h3>
+
+<p>ELF is a common lisp library for the manipulation of ELF files,
+     which can be used to read, inspect, modify and write elf files.</p>
+
+The code is available under the <a
+href="http://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License</a>.
+
+<p>
+<font color=red>Source:</font>
+<a href="http://github.com/eschulte/elf">http://github.com/eschulte/elf</a>.
+
+<br>&nbsp;<br><h3><a class=none name="contents">Contents</a></h3>
+<ol>
+  <li><a href="#source">Source</a></li>
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#dictionary">The ELF dictionary</a></li>
+    <ol>
+      <li><a href="#*class*"><code>*class*</code></a></li>
+      <li><a href="#*endian*"><code>*endian*</code></a></li>
+      <li><a href="#addralign"><code>addralign</code></a></li>
+      <li><a href="#address"><code>address</code></a></li>
+      <li><a href="#align"><code>align</code></a></li>
+      <li><a href="#alignment"><code>alignment</code></a></li>
+      <li><a href="#binding"><code>binding</code></a></li>
+      <li><a href="#bytes-to-int"><code>bytes-to-int</code></a></li>
+      <li><a href="#copy-elf"><code>copy-elf</code></a></li>
+      <li><a href="#data"><code>data</code></a></li>
+      <li><a href="#elf"><code>elf</code></a></li>
+      <li><a href="#elf"><code>elf</code></a></li>
+      <li><a href="#elf-p"><code>elf-p</code></a></li>
+      <li><a href="#entsize"><code>entsize</code></a></li>
+      <li><a href="#filesz"><code>filesz</code></a></li>
+      <li><a href="#flags"><code>flags</code></a></li>
+      <li><a href="#generic-copy"><code>generic-copy</code></a></li>
+      <li><a href="#header"><code>header</code></a></li>
+      <li><a href="#info"><code>info</code></a></li>
+      <li><a href="#int-to-bytes"><code>int-to-bytes</code></a></li>
+      <li><a href="#link"><code>link</code></a></li>
+      <li><a href="#magic-number"><code>magic-number</code></a></li>
+      <li><a href="#mapslots"><code>mapslots</code></a></li>
+      <li><a href="#memsz"><code>memsz</code></a></li>
+      <li><a href="#name"><code>name</code></a></li>
+      <li><a href="#named-section"><code>named-section</code></a></li>
+      <li><a href="#named-symbol"><code>named-symbol</code></a></li>
+      <li><a href="#objdump"><code>objdump</code></a></li>
+      <li><a href="#objdump-parse"><code>objdump-parse</code></a></li>
+      <li><a href="#offset"><code>offset</code></a></li>
+      <li><a href="#ordering"><code>ordering</code></a></li>
+      <li><a href="#other"><code>other</code></a></li>
+      <li><a href="#paddr"><code>paddr</code></a></li>
+      <li><a href="#parse-addresses"><code>parse-addresses</code></a></li>
+      <li><a href="#ph"><code>ph</code></a></li>
+      <li><a href="#program-table"><code>program-table</code></a></li>
+      <li><a href="#ptr"><code>ptr</code></a></li>
+      <li><a href="#read-elf"><code>read-elf</code></a></li>
+      <li><a href="#read-value"><code>read-value</code></a></li>
+      <li><a href="#rel-info"><code>rel-info</code></a></li>
+      <li><a href="#rel-sym"><code>rel-sym</code></a></li>
+      <li><a href="#rel-type"><code>rel-type</code></a></li>
+      <li><a href="#section-table"><code>section-table</code></a></li>
+      <li><a href="#sections"><code>sections</code></a></li>
+      <li><a href="#sh"><code>sh</code></a></li>
+      <li><a href="#shndx"><code>shndx</code></a></li>
+      <li><a href="#show-dynamic"><code>show-dynamic</code></a></li>
+      <li><a href="#show-file-layout"><code>show-file-layout</code></a></li>
+      <li><a href="#show-memory-layout"><code>show-memory-layout</code></a></li>
+      <li><a href="#show-symbols"><code>show-symbols</code></a></li>
+      <li><a href="#size"><code>size</code></a></li>
+      <li><a href="#sym-name"><code>sym-name</code></a></li>
+      <li><a href="#symbols"><code>symbols</code></a></li>
+      <li><a href="#type"><code>type</code></a></li>
+      <li><a href="#un-type"><code>un-type</code></a></li>
+      <li><a href="#vaddr"><code>vaddr</code></a></li>
+      <li><a href="#val"><code>val</code></a></li>
+      <li><a href="#value"><code>value</code></a></li>
+      <li><a href="#vma"><code>vma</code></a></li>
+      <li><a href="#write-elf"><code>write-elf</code></a></li>
+      <li><a href="#write-value"><code>write-value</code></a></li>
+    </ol>
+  <li><a href="#ack">Acknowledgements</a></li>
+</ol>
+
+<br>&nbsp;<br><h3><a class=none name="source">Source</a></h3>
+
+ELF together with this documentation can be found at <a
+href="http://github.com/eschulte/elf">http://github.com/eschulte/elf</a>.
+
+<br>&nbsp;<br><h3><a class=none name="introduction">Introduction</a></h3>
+
+<p>See <a href=".ELF.txt">ELF.txt</a> for more information on the elf format.
+Much of the code in <code>elf.lisp</code> is a direct translation of the elf
+data structures described in the ELF.txt document augmented with
+specific information translated from <code>/usr/include/elf.h</code>.</p>
+
+<h1>Example Usage</h1>
+
+<h2>load the elf library </h2>
+
+<p>First load the up the <code>elf</code> library.</p>
+
+<pre><code>(require :elf)
+(in-package :elf)
+</code></pre>
+
+<h2>create a simple elf binary and confirm it is an elf file </h2>
+
+<p>For the remainder of this example, we'll use a simple elf binary
+executable named =hello=, compiled from the following C code.</p>
+
+<pre><code>echo 'main(){puts("hello world");}'|gcc -x c - -o hello
+</code></pre>
+
+<p>We can check that this is indeed an elf file by checking the magic
+number at the start of the file.</p>
+
+<p>(elf-p "hello") ; => T</p>
+
+<h2>read an elf object, and view it's header information </h2>
+
+<p>Then we read the binary file into an elf object.</p>
+
+<pre><code>(defvar *elf* (read-elf "hello"))
+</code></pre>
+
+<p>Using the <code>show-it</code> function from the elf-test package we can
+inspect the header at the top of the elf file.</p>
+
+<pre><code>(elf-test:show-it (header *elf*) :out nil)
+</code></pre>
+
+<h2>view section-table and program-table information </h2>
+
+<p>We can list the names of the sections of the elf file.</p>
+
+<pre><code>(mapcar #'name (sections *elf*))
+;; =&gt; ("" ".interp" ".note.ABI-tag" ".note.gnu.build-id"...
+</code></pre>
+
+<p>We can list the segments in the program table, and view both the
+layout of the elements of the elf file, both in it's binary file
+and when it is an executable image in memory.</p>
+
+<pre><code>;; looking at the program table
+(mapc #'elf-test:show-it (program-table *elf*))
+TYPE:PHDR FLAGS:5 OFFSET:64 VADDR:4194368 PADDR:4194368 FILE...
+TYPE:INTERP FLAGS:4 OFFSET:512 VADDR:4194816 PADDR:4194816 F...
+TYPE:LOAD FLAGS:5 OFFSET:0 VADDR:4194304 PADDR:4194304 FILES...
+TYPE:LOAD FLAGS:6 OFFSET:1744 VADDR:6293200 PADDR:6293200 FI...
+TYPE:DYNAMIC FLAGS:6 OFFSET:1768 VADDR:6293224 PADDR:6293224...
+TYPE:NOTE FLAGS:4 OFFSET:540 VADDR:4194844 PADDR:4194844 FIL...
+TYPE:GNU_EH_FRAME FLAGS:4 OFFSET:1472 VADDR:4195776 PADDR:41...
+TYPE:GNU_STACK FLAGS:6 OFFSET:0 VADDR:0 PADDR:0 FILESZ:0 MEM...
+
+;; view the contents of elf, as they exist in the file
+(show-file-layout *elf*)
+START    OFFSET   CONTENTS           END     
+0        NONE     HEADER             64      
+64       NONE     PROGRAM-TABLE      512     
+512      512      .interp            540     
+540      540      .note.ABI-tag      572     
+572      572      .note.gnu.build-id 608     
+608      608      .gnu.hash          636     
+636      NONE     FILLER             640     
+640      640      .dynsym            736     
+736      736      .dynstr            797     
+...
+
+;; view the contents of elf, as they exist in the file
+(show-memory-layout *elf*)
+addr     contents          end     
+-------------------------------------
+0x400000 LOAD               0x4006CC
+0x400040 PHDR               0x400200
+0x400200 INTERP             0x40021C
+0x400200 .interp            0x40021C
+0x40021C NOTE               0x400260
+0x40021C .note.ABI-tag      0x40023C
+...
+</code></pre>
+
+<h2>write an elf object to disk </h2>
+
+<p>We can write out the elf file to disk.</p>
+
+<pre><code>;; write out the elf file, the results should be identical to
+;; the original
+(write-elf *elf* "hello2")
+</code></pre>
+
+<p>The resulting file will be identical to the original file from
+which the elf object was read.</p>
+
+<pre><code>diff hello hello2
+</code></pre>
+
+<h2>manipulate the contents of an elf object </h2>
+
+<p>We can manipulate these elf objects, and then write the results
+back out to disk.  For example we can change the code in the
+<code>.text</code> section of the file, and then write the results back out to
+disk.</p>
+
+<pre><code>;; change the .text section -- this doesn't break the program
+(aref (data (named-section *elf* ".text")) 40) ; =&gt; 144
+(setf (aref (data (named-section *elf* ".text")) 40) #xc3)
+(aref (data (named-section *elf* ".text")) 40) ; =&gt; 195
+
+;; When we write the modified elf to a file, the resulting file
+;; will be different than the original hello (in one byte) but
+;; will still execute since we changed a byte off of the
+;; execution path
+(write-elf *elf* "hello2")
+</code></pre>
+
+<p>Meta information like the relevant program and section headers, as
+well as symbol information in the <code>.dynamic</code> section of the file
+will be automatically updated.</p>
+
+<pre><code>(let ((text (named-section *elf* ".text")))
+  (setf (data text)
+        (concatenate 'vector
+                     (data text)
+                     (make-array 16 :initial-element #x90))))
+(write-elf *elf* "hello3")
+</code></pre>
+
+<p>Note however that the resulting file will segfault on evaluation,
+because even though the meta-data of the elf file is updated
+automatically, there are hard-coded offsets and memory locations in
+the compiled data contained in the elf file, which can not be
+automatically updated.</p>
+
+<br>&nbsp;<br><h3><a class=none name="dictionary">The ELF dictionary</a></h3>
+
+
+<!-- Entry for *CLASS* -->
+
+<p><br>[Special variable]<br><a class=none name='*class*'><b>*class*</b></a>
+<blockquote><br>
+
+Word size of the machine, (e.g. :32-bit or :64-bit).
+
+
+
+
+</blockquote>
+
+<!-- End of entry for *CLASS* -->
+
+
+<!-- Entry for *ENDIAN* -->
+
+<p><br>[Special variable]<br><a class=none name='*endian*'><b>*endian*</b></a>
+<blockquote><br>
+
+Controls the endianness of how bytes are read.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for *ENDIAN* -->
+
+
+<!-- Entry for ADDRALIGN -->
+
+<p><br>[Generic accessor]<br><a class=none name='addralign'><b>addralign</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>addralign</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ADDRALIGN -->
+
+
+<!-- Entry for ADDRALIGN -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>addralign</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>addralign</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ADDRALIGN -->
+
+
+<!-- Entry for ADDRESS -->
+
+<p><br>[Generic accessor]<br><a class=none name='address'><b>address</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>address</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ADDRESS -->
+
+
+<!-- Entry for ADDRESS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>address</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>address</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ADDRESS -->
+
+
+<!-- Entry for ALIGN -->
+
+<p><br>[Generic accessor]<br><a class=none name='align'><b>align</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>align</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ALIGN -->
+
+
+<!-- Entry for ALIGN -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>align</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>align</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ALIGN -->
+
+
+<!-- Entry for ALIGN -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>align</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>align</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ALIGN -->
+
+
+<!-- Entry for ALIGNMENT -->
+
+<p><br>[Generic accessor]<br><a class=none name='alignment'><b>alignment</b> <i>sec</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>alignment</b> <i>sec</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ALIGNMENT -->
+
+
+<!-- Entry for ALIGNMENT -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>alignment</b> <i>(sec section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>alignment</b> <i>(sec section)</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ALIGNMENT -->
+
+
+<!-- Entry for BINDING -->
+
+<p><br>[Generic function]<br><a class=none name='binding'><b>binding</b> <i>sym</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for BINDING -->
+
+
+<!-- Entry for BINDING -->
+
+<p><br>[Method]<br><a class=none><b>binding</b> <i>(sym elf-sym)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for BINDING -->
+
+
+<!-- Entry for BYTES-TO-INT -->
+
+<p><br>[Function]<br><a class=none name='bytes-to-int'><b>bytes-to-int</b> <i>bytes <tt>&amp;optional</tt> signed-p <tt>&amp;aux</tt> steps</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for BYTES-TO-INT -->
+
+
+<!-- Entry for COPY-ELF -->
+
+<p><br>[Function]<br><a class=none name='copy-elf'><b>copy-elf</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for COPY-ELF -->
+
+
+<!-- Entry for DATA -->
+
+<p><br>[Generic accessor]<br><a class=none name='data'><b>data</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>data</b> <i>sec</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for DATA -->
+
+
+<!-- Entry for DATA -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>data</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>data</b> <i>(sec section)</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for DATA -->
+
+
+<!-- Entry for ELF -->
+
+<p><br>[Standard class]<br><a class=none name='elf'><b>elf</b></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ELF -->
+
+
+<!-- Entry for ELF -->
+
+<p><br>[Generic accessor]<br><a class=none name='elf'><b>elf</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>elf</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ELF -->
+
+
+<!-- Entry for ELF -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>elf</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>elf</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ELF -->
+
+
+<!-- Entry for ELF-P -->
+
+<p><br>[Function]<br><a class=none name='elf-p'><b>elf-p</b> <i>file</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Return t if file is an ELF file (using the magic number test).
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ELF-P -->
+
+
+<!-- Entry for ENTSIZE -->
+
+<p><br>[Generic accessor]<br><a class=none name='entsize'><b>entsize</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>entsize</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ENTSIZE -->
+
+
+<!-- Entry for ENTSIZE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>entsize</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>entsize</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ENTSIZE -->
+
+
+<!-- Entry for FILESZ -->
+
+<p><br>[Generic accessor]<br><a class=none name='filesz'><b>filesz</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>filesz</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for FILESZ -->
+
+
+<!-- Entry for FILESZ -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>filesz</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>filesz</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FILESZ -->
+
+
+<!-- Entry for FILESZ -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>filesz</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>filesz</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FILESZ -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Generic accessor]<br><a class=none name='flags'><b>flags</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>flags</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>flags</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>flags</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>flags</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for FLAGS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>flags</b> <i>(object elf-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>flags</b> <i>(object elf-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for FLAGS -->
+
+
+<!-- Entry for GENERIC-COPY -->
+
+<p><br>[Function]<br><a class=none name='generic-copy'><b>generic-copy</b> <i>obj <tt>&amp;optional</tt> trace</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+A generic copy method, may run way too long on partially circular elements.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for GENERIC-COPY -->
+
+
+<!-- Entry for HEADER -->
+
+<p><br>[Generic accessor]<br><a class=none name='header'><b>header</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>header</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for HEADER -->
+
+
+<!-- Entry for HEADER -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>header</b> <i>(object elf)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>header</b> <i>(object elf)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for HEADER -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Generic accessor]<br><a class=none name='info'><b>info</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-rela-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-rela-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-rela-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-rela-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-rel-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-rel-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object elf-rel-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object elf-rel-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INFO -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>info</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>info</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for INFO -->
+
+
+<!-- Entry for INT-TO-BYTES -->
+
+<p><br>[Function]<br><a class=none name='int-to-bytes'><b>int-to-bytes</b> <i>int size <tt>&amp;optional</tt> signed-p <tt>&amp;aux</tt> steps</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for INT-TO-BYTES -->
+
+
+<!-- Entry for LINK -->
+
+<p><br>[Generic accessor]<br><a class=none name='link'><b>link</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>link</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for LINK -->
+
+
+<!-- Entry for LINK -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>link</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>link</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for LINK -->
+
+
+<!-- Entry for MAGIC-NUMBER -->
+
+<p><br>[Generic accessor]<br><a class=none name='magic-number'><b>magic-number</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>magic-number</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for MAGIC-NUMBER -->
+
+
+<!-- Entry for MAGIC-NUMBER -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>magic-number</b> <i>(object elf-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>magic-number</b> <i>(object elf-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for MAGIC-NUMBER -->
+
+
+<!-- Entry for MAPSLOTS -->
+
+<p><br>[Function]<br><a class=none name='mapslots'><b>mapslots</b> <i>func obj</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Map func over the slots of the clos object OBJ.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for MAPSLOTS -->
+
+
+<!-- Entry for MEMSZ -->
+
+<p><br>[Generic accessor]<br><a class=none name='memsz'><b>memsz</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>memsz</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for MEMSZ -->
+
+
+<!-- Entry for MEMSZ -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>memsz</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>memsz</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for MEMSZ -->
+
+
+<!-- Entry for MEMSZ -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>memsz</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>memsz</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for MEMSZ -->
+
+
+<!-- Entry for NAME -->
+
+<p><br>[Generic accessor]<br><a class=none name='name'><b>name</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>name</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for NAME -->
+
+
+<!-- Entry for NAME -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>name</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>name</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAME -->
+
+
+<!-- Entry for NAME -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>name</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>name</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAME -->
+
+
+<!-- Entry for NAME -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>name</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>name</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAME -->
+
+
+<!-- Entry for NAME -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>name</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>name</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAME -->
+
+
+<!-- Entry for NAMED-SECTION -->
+
+<p><br>[Function]<br><a class=none name='named-section'><b>named-section</b> <i>elf name</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Return the section in ELF named NAME.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAMED-SECTION -->
+
+
+<!-- Entry for NAMED-SYMBOL -->
+
+<p><br>[Function]<br><a class=none name='named-symbol'><b>named-symbol</b> <i>elf name</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Return the symbol in ELF named NAME.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for NAMED-SYMBOL -->
+
+
+<!-- Entry for OBJDUMP -->
+
+<p><br>[Generic function]<br><a class=none name='objdump'><b>objdump</b> <i>sec</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for OBJDUMP -->
+
+
+<!-- Entry for OBJDUMP -->
+
+<p><br>[Method]<br><a class=none><b>objdump</b> <i>(sec section)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Use objdump to return the disassembly of SEC.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OBJDUMP -->
+
+
+<!-- Entry for OBJDUMP-PARSE -->
+
+<p><br>[Function]<br><a class=none name='objdump-parse'><b>objdump-parse</b> <i>output</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Parse the output of <code>objdump</code> returning the disassembly by symbol.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OBJDUMP-PARSE -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Generic accessor]<br><a class=none name='offset'><b>offset</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object elf-rela-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object elf-rela-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object elf-rela-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object elf-rela-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object elf-rel-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object elf-rel-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object elf-rel-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object elf-rel-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for OFFSET -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>offset</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>offset</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OFFSET -->
+
+
+<!-- Entry for ORDERING -->
+
+<p><br>[Generic accessor]<br><a class=none name='ordering'><b>ordering</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ordering</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for ORDERING -->
+
+
+<!-- Entry for ORDERING -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>ordering</b> <i>(object elf)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ordering</b> <i>(object elf)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for ORDERING -->
+
+
+<!-- Entry for OTHER -->
+
+<p><br>[Generic accessor]<br><a class=none name='other'><b>other</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>other</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for OTHER -->
+
+
+<!-- Entry for OTHER -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>other</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>other</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OTHER -->
+
+
+<!-- Entry for OTHER -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>other</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>other</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for OTHER -->
+
+
+<!-- Entry for PADDR -->
+
+<p><br>[Generic accessor]<br><a class=none name='paddr'><b>paddr</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>paddr</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for PADDR -->
+
+
+<!-- Entry for PADDR -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>paddr</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>paddr</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for PADDR -->
+
+
+<!-- Entry for PADDR -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>paddr</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>paddr</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for PADDR -->
+
+
+<!-- Entry for PARSE-ADDRESSES -->
+
+<p><br>[Function]<br><a class=none name='parse-addresses'><b>parse-addresses</b> <i>lines</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Parse addresses from lines of objdump output.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for PARSE-ADDRESSES -->
+
+
+<!-- Entry for PH -->
+
+<p><br>[Generic accessor]<br><a class=none name='ph'><b>ph</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ph</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for PH -->
+
+
+<!-- Entry for PH -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>ph</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ph</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for PH -->
+
+
+<!-- Entry for PROGRAM-TABLE -->
+
+<p><br>[Generic accessor]<br><a class=none name='program-table'><b>program-table</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>program-table</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for PROGRAM-TABLE -->
+
+
+<!-- Entry for PROGRAM-TABLE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>program-table</b> <i>(object elf)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>program-table</b> <i>(object elf)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for PROGRAM-TABLE -->
+
+
+<!-- Entry for PTR -->
+
+<p><br>[Generic accessor]<br><a class=none name='ptr'><b>ptr</b> <i>dyn</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ptr</b> <i>dyn</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for PTR -->
+
+
+<!-- Entry for PTR -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>ptr</b> <i>(dyn elf-dyn)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>ptr</b> <i>(dyn elf-dyn)</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for PTR -->
+
+
+<!-- Entry for READ-ELF -->
+
+<p><br>[Function]<br><a class=none name='read-elf'><b>read-elf</b> <i>file</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for READ-ELF -->
+
+
+<!-- Entry for READ-VALUE -->
+
+<p><br>[Generic function]<br><a class=none name='read-value'><b>read-value</b> <i>type stream <tt>&amp;key</tt> character-type length bytes swap terminator bytes bits-per-byte</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Read a value of the given type from the stream.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for READ-VALUE -->
+
+
+<!-- Entry for REL-INFO -->
+
+<p><br>[Function]<br><a class=none name='rel-info'><b>rel-info</b> <i>sym type</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Convert a symbol and type back into the info field of an elf-rel.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for REL-INFO -->
+
+
+<!-- Entry for REL-SYM -->
+
+<p><br>[Generic function]<br><a class=none name='rel-sym'><b>rel-sym</b> <i>rel</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for REL-SYM -->
+
+
+<!-- Entry for REL-SYM -->
+
+<p><br>[Method]<br><a class=none><b>rel-sym</b> <i>(rel elf-rel)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for REL-SYM -->
+
+
+<!-- Entry for REL-TYPE -->
+
+<p><br>[Generic function]<br><a class=none name='rel-type'><b>rel-type</b> <i>rel header</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for REL-TYPE -->
+
+
+<!-- Entry for REL-TYPE -->
+
+<p><br>[Method]<br><a class=none><b>rel-type</b> <i>(rel elf-rel) (header elf-header)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+The interpretation of the type is machine specific.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for REL-TYPE -->
+
+
+<!-- Entry for SECTION-TABLE -->
+
+<p><br>[Generic accessor]<br><a class=none name='section-table'><b>section-table</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>section-table</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SECTION-TABLE -->
+
+
+<!-- Entry for SECTION-TABLE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>section-table</b> <i>(object elf)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>section-table</b> <i>(object elf)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SECTION-TABLE -->
+
+
+<!-- Entry for SECTIONS -->
+
+<p><br>[Generic accessor]<br><a class=none name='sections'><b>sections</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sections</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SECTIONS -->
+
+
+<!-- Entry for SECTIONS -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>sections</b> <i>(object elf)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sections</b> <i>(object elf)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SECTIONS -->
+
+
+<!-- Entry for SH -->
+
+<p><br>[Generic accessor]<br><a class=none name='sh'><b>sh</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sh</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SH -->
+
+
+<!-- Entry for SH -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>sh</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sh</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SH -->
+
+
+<!-- Entry for SHNDX -->
+
+<p><br>[Generic accessor]<br><a class=none name='shndx'><b>shndx</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>shndx</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SHNDX -->
+
+
+<!-- Entry for SHNDX -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>shndx</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>shndx</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHNDX -->
+
+
+<!-- Entry for SHNDX -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>shndx</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>shndx</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHNDX -->
+
+
+<!-- Entry for SHOW-DYNAMIC -->
+
+<p><br>[Function]<br><a class=none name='show-dynamic'><b>show-dynamic</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Show the dynamic symbols of ELF in a manner similar to readelf.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHOW-DYNAMIC -->
+
+
+<!-- Entry for SHOW-FILE-LAYOUT -->
+
+<p><br>[Function]<br><a class=none name='show-file-layout'><b>show-file-layout</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Show the layout of the elements of an elf file with binary offset.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHOW-FILE-LAYOUT -->
+
+
+<!-- Entry for SHOW-MEMORY-LAYOUT -->
+
+<p><br>[Function]<br><a class=none name='show-memory-layout'><b>show-memory-layout</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Show the layout of the elements of an elf file with binary offset.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHOW-MEMORY-LAYOUT -->
+
+
+<!-- Entry for SHOW-SYMBOLS -->
+
+<p><br>[Function]<br><a class=none name='show-symbols'><b>show-symbols</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Show all symbols in ELF in a manner similar to readelf.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SHOW-SYMBOLS -->
+
+
+<!-- Entry for SIZE -->
+
+<p><br>[Generic accessor]<br><a class=none name='size'><b>size</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>size</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SIZE -->
+
+
+<!-- Entry for SIZE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>size</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>size</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SIZE -->
+
+
+<!-- Entry for SIZE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>size</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>size</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SIZE -->
+
+
+<!-- Entry for SIZE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>size</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>size</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SIZE -->
+
+
+<!-- Entry for SIZE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>size</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>size</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SIZE -->
+
+
+<!-- Entry for SYM-NAME -->
+
+<p><br>[Generic accessor]<br><a class=none name='sym-name'><b>sym-name</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sym-name</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SYM-NAME -->
+
+
+<!-- Entry for SYM-NAME -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>sym-name</b> <i>(object elf-sym)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>sym-name</b> <i>(object elf-sym)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SYM-NAME -->
+
+
+<!-- Entry for SYMBOLS -->
+
+<p><br>[Generic function]<br><a class=none name='symbols'><b>symbols</b> <i>elf</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for SYMBOLS -->
+
+
+<!-- Entry for SYMBOLS -->
+
+<p><br>[Method]<br><a class=none><b>symbols</b> <i>(elf elf)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Return the symbols contained in ELF.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for SYMBOLS -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Generic accessor]<br><a class=none name='type'><b>type</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>type</b> <i>(object section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>(object section)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Method]<br><a class=none><b>type</b> <i>(object elf-sym)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>type</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>type</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>type</b> <i>(object section-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>(object section-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for TYPE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>type</b> <i>(object elf-header)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>type</b> <i>(object elf-header)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for TYPE -->
+
+
+<!-- Entry for UN-TYPE -->
+
+<p><br>[Generic function]<br><a class=none name='un-type'><b>un-type</b> <i>dyn</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for UN-TYPE -->
+
+
+<!-- Entry for UN-TYPE -->
+
+<p><br>[Method]<br><a class=none><b>un-type</b> <i>(dyn elf-dyn)</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for UN-TYPE -->
+
+
+<!-- Entry for VADDR -->
+
+<p><br>[Generic accessor]<br><a class=none name='vaddr'><b>vaddr</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>vaddr</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VADDR -->
+
+
+<!-- Entry for VADDR -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>vaddr</b> <i>(object program-header-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>vaddr</b> <i>(object program-header-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for VADDR -->
+
+
+<!-- Entry for VADDR -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>vaddr</b> <i>(object program-header-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>vaddr</b> <i>(object program-header-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for VADDR -->
+
+
+<!-- Entry for VAL -->
+
+<p><br>[Generic accessor]<br><a class=none name='val'><b>val</b> <i>dyn</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>val</b> <i>dyn</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VAL -->
+
+
+<!-- Entry for VAL -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>val</b> <i>(dyn elf-dyn)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>val</b> <i>(dyn elf-dyn)</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VAL -->
+
+
+<!-- Entry for VALUE -->
+
+<p><br>[Generic accessor]<br><a class=none name='value'><b>value</b> <i>object</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>value</b> <i>object</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VALUE -->
+
+
+<!-- Entry for VALUE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>value</b> <i>(object elf-sym-64)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>value</b> <i>(object elf-sym-64)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for VALUE -->
+
+
+<!-- Entry for VALUE -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>value</b> <i>(object elf-sym-32)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>value</b> <i>(object elf-sym-32)</i><tt>)</tt> <i>new-value</i><tt>)</tt></a>
+<blockquote><br>
+
+automatically generated reader method
+
+
+
+
+</blockquote>
+
+<!-- End of entry for VALUE -->
+
+
+<!-- Entry for VMA -->
+
+<p><br>[Generic accessor]<br><a class=none name='vma'><b>vma</b> <i>sec</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>vma</b> <i>sec</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VMA -->
+
+
+<!-- Entry for VMA -->
+
+<p><br>[Specialized accessor]<br><a class=none><b>vma</b> <i>(sec section)</i> =&gt; <i>result</i></a>
+<br><a class=none><tt>(setf (</tt><b>vma</b> <i>(sec section)</i><tt>)</tt> <i>new</i><tt>)</tt></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for VMA -->
+
+
+<!-- Entry for WRITE-ELF -->
+
+<p><br>[Function]<br><a class=none name='write-elf'><b>write-elf</b> <i>elf file</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+
+
+</blockquote>
+
+<!-- End of entry for WRITE-ELF -->
+
+
+<!-- Entry for WRITE-VALUE -->
+
+<p><br>[Generic function]<br><a class=none name='write-value'><b>write-value</b> <i>type stream value <tt>&amp;key</tt> character-type length bytes swap terminator bytes bits-per-byte</i> =&gt; <i>result</i></a>
+<blockquote><br>
+
+Write a value as the given type to the stream.
+
+
+
+
+</blockquote>
+
+<!-- End of entry for WRITE-VALUE -->
+
+
+<br>&nbsp;<br><h3><a class=none name="ack">Acknowledgements</a></h3>
+
+<p>
+This documentation was prepared with a hacked up version of <a href="http://weitz.de/documentation-template/">DOCUMENTATION-TEMPLATE</a>.
+</p>
+
+</body>
+</html>
