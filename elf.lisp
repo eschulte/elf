@@ -6,9 +6,6 @@
 
 ;;; Commentary
 
-;; ELF is a common lisp library for the manipulation of ELF files,
-;; which can be used to read, inspect, modify and write elf files.
-;;
 ;; See [ELF.txt](.ELF.txt) for more information on the elf format.
 ;; Much of the code in `elf.lisp` is a direct translation of the elf
 ;; data structures described in the ELF.txt document augmented with
