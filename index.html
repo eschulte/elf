@@ -116,7 +116,7 @@ href="http://github.com/eschulte/elf">http://github.com/eschulte/elf</a>.
 
 <br>&nbsp;<br><h3><a class=none name="introduction">Introduction</a></h3>
 
-<p>See <a href=".ELF.txt">ELF.txt</a> for more information on the elf format.
+<p>See <a href="ELF.txt">ELF.txt</a> for more information on the elf format.
 Much of the code in <code>elf.lisp</code> is a direct translation of the elf
 data structures described in the ELF.txt document augmented with
 specific information translated from <code>/usr/include/elf.h</code>.</p>
@@ -142,7 +142,8 @@ executable named =hello=, compiled from the following C code.</p>
 <p>We can check that this is indeed an elf file by checking the magic
 number at the start of the file.</p>
 
-<p>(elf-p "hello") ; => T</p>
+<pre><code>(elf-p "hello") ; =&gt; T
+</code></pre>
 
 <h2>read an elf object, and view it's header information </h2>
 
