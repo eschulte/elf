@@ -1,5 +1,5 @@
 ;; Copyright (C) 2011-2013 Eric Schulte
-(defsystem elf
+(defsystem :elf
   :name "elf"
   :author "Eric Schulte <schulte.eric@gmail.com>"
   :license "GPL V3"
@@ -12,5 +12,5 @@
                #-ecl trivial-shell
                cl-ppcre)
   :components ((:file "package")
-               (:file "util")
+               (:file "util" :depends-on ("package"))
                (:file "elf" :depends-on ("package" "util"))))

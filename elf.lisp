@@ -141,9 +141,7 @@
 ;; automatically updated.
 
 ;;; Code:
-(in-package #:elf)
-
-(load "util.lisp")
+(in-package :elf)
 
 
 ;;; Basic Binary types

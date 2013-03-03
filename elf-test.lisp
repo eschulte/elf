@@ -65,7 +65,7 @@
   (with-fixture hello-elf
     (is (equal *test-class* *class*))
     (test-write-elf *elf* *tmp-file*)
-    (is (equal-it *elf* (test-read-elf *tmp-file*)))))
+    (is (elf::equal-it *elf* (test-read-elf *tmp-file*)))))
 
 (deftest test-write-working-executable ()
   (with-fixture hello-elf
@@ -74,7 +74,7 @@
     #-ccl
     (when (equal (system-class) *test-class*)
       (shell-command (format nil "chmod +x ~a" *tmp-file*))
-      (is (equal "hello world" (trim (shell-command *tmp-file*)))))))
+      (is (equal "hello world" (elf::trim (shell-command *tmp-file*)))))))
 
 (deftest test-tweaked-text-working-executable ()
   (with-fixture hello-elf
@@ -85,13 +85,14 @@
     #-ccl
     (when (equal (system-class) *test-class*)
       (shell-command (format nil "chmod +x ~a" *tmp-file*))
-      (is (equal "hello world" (trim (shell-command *tmp-file*)))))))
+      (is (equal "hello world" (elf::trim (shell-command *tmp-file*)))))))
 
 (deftest test-data-setf-changes ()
   (with-fixture hello-elf
     (let ((first-data (copy-seq (data (named-section *elf* ".text")))))
       (setf (aref (data (named-section *elf* ".text")) 42) #xc3)
-      (is (not (equal-it first-data (data (named-section *elf* ".text"))))))))
+      (is (not (elf::equal-it first-data
+                              (data (named-section *elf* ".text"))))))))
 
 (deftest test-objdump ()
   (with-fixture hello-elf
@@ -113,12 +114,12 @@
                                (loop for line = (read-line in nil :eof)
                                   until (eq line :eof)
                                   collect line))))
-    (is (equal-it '(0) (second (nth 12 (parse-addresses lines)))))))
+    (is (elf::equal-it '(0) (second (nth 12 (parse-addresses lines)))))))
 
 (deftest test-equality-of-data-and-objdump-bytes ()
   (with-fixture hello-elf
     (let ((.text (named-section *elf* ".text")))
-      (is (equal-it (coerce (data .text) 'list)
+      (is (elf::equal-it (coerce (data .text) 'list)
                     (apply #'append
                            (apply #'append
                                   (mapcar
@@ -128,7 +129,7 @@
 (deftest test-addresses-compared-w/objdump-output ()
   (with-fixture hello-elf
     (let ((.text (named-section *elf* ".text")))
-      (is (equal-it
+      (is (elf::equal-it
            (apply #'append
                   (mapcar
                    (lambda-bind ((addr bytes disasm))
