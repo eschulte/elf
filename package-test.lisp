@@ -9,4 +9,4 @@
    :trivial-shell
    :trivial-timeout)
   (:shadow :type)
-  (:export :test))
+  (:export :show-it :describe-it :test))

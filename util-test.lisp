@@ -55,14 +55,14 @@
          new))
       (t (error "~&don't know how to copy ~a" obj)))))
 
-(defun show-it (hd &optional out)
+(defun show-it (hd &key (out t))
   "Print the fields of a elf, section or program header.
 Optional argument OUT specifies an output stream."
   (format (or out t) "~&")
   (mapcar
    (lambda (slot)
      (let ((val (slot-value hd slot)))
-       (format (or out t) "~s:~a " slot val)
+       (format out "~s:~a " slot val)
        (list slot val)))
    (mapcar #'my-slot-definition-name (my-class-slots (class-of hd)))))
 

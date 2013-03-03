@@ -1,26 +1,147 @@
 ;;; elf.lisp --- A Common Lisp library for manipulating ELF files
 
-;; For information on the elf format see the following
-;; http://www.muppetlabs.com/~breadbox/software/ELF.txt
+;; Copyright (C) 2011-2013  Eric Schulte
 
-;; Copyright (C) 2011  Eric Schulte
+;; Licensed under the Gnu Public License Version 3 or later
 
-;;; License:
+;;; Commentary
 
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
+;; ELF is a common lisp library for the manipulation of ELF files,
+;; which can be used to read, inspect, modify and write elf files.
 ;;
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
+;; See [ELF.txt](.ELF.txt) for more information on the elf format.
+;; Much of the code in `elf.lisp` is a direct translation of the elf
+;; data structures described in the ELF.txt document augmented with
+;; specific information translated from `/usr/include/elf.h`.
 ;;
-;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-;; Boston, MA 02110-1301, USA.
+;; Example Usage
+;; =============
+;; 
+;; load the elf library 
+;; ---------------------
+;; First load the up the `elf` library.
+;;
+;;     (require :elf)
+;;     (in-package :elf)
+;;
+;; create a simple elf binary and confirm it is an elf file 
+;; ---------------------------------------------------------
+;; For the remainder of this example, we'll use a simple elf binary
+;; executable named =hello=, compiled from the following C code.
+;;
+;;     echo 'main(){puts("hello world");}'|gcc -x c - -o hello
+;;
+;; We can check that this is indeed an elf file by checking the magic
+;; number at the start of the file.
+;;
+;;   (elf-p "hello") ; => T
+;;
+;; read an elf object, and view it's header information 
+;; ----------------------------------------------------
+;; Then we read the binary file into an elf object.
+;;
+;;     (defvar *elf* (read-elf "hello"))
+;;
+;; Using the `show-it` function from the elf-test package we can
+;; inspect the header at the top of the elf file.
+;;
+;;     (elf-test:show-it (header *elf*) :out nil)
+;;
+;; view section-table and program-table information 
+;; -------------------------------------------------
+;; We can list the names of the sections of the elf file.
+;;
+;;     (mapcar #'name (sections *elf*))
+;;     ;; => ("" ".interp" ".note.ABI-tag" ".note.gnu.build-id"...
+;;
+;; We can list the segments in the program table, and view both the
+;; layout of the elements of the elf file, both in it's binary file
+;; and when it is an executable image in memory.
+;;
+;;     ;; looking at the program table
+;;     (mapc #'elf-test:show-it (program-table *elf*))
+;;     TYPE:PHDR FLAGS:5 OFFSET:64 VADDR:4194368 PADDR:4194368 FILE...
+;;     TYPE:INTERP FLAGS:4 OFFSET:512 VADDR:4194816 PADDR:4194816 F...
+;;     TYPE:LOAD FLAGS:5 OFFSET:0 VADDR:4194304 PADDR:4194304 FILES...
+;;     TYPE:LOAD FLAGS:6 OFFSET:1744 VADDR:6293200 PADDR:6293200 FI...
+;;     TYPE:DYNAMIC FLAGS:6 OFFSET:1768 VADDR:6293224 PADDR:6293224...
+;;     TYPE:NOTE FLAGS:4 OFFSET:540 VADDR:4194844 PADDR:4194844 FIL...
+;;     TYPE:GNU_EH_FRAME FLAGS:4 OFFSET:1472 VADDR:4195776 PADDR:41...
+;;     TYPE:GNU_STACK FLAGS:6 OFFSET:0 VADDR:0 PADDR:0 FILESZ:0 MEM...
+;;
+;;     ;; view the contents of elf, as they exist in the file
+;;     (show-file-layout *elf*)
+;;     START    OFFSET   CONTENTS           END     
+;;     0        NONE     HEADER             64      
+;;     64       NONE     PROGRAM-TABLE      512     
+;;     512      512      .interp            540     
+;;     540      540      .note.ABI-tag      572     
+;;     572      572      .note.gnu.build-id 608     
+;;     608      608      .gnu.hash          636     
+;;     636      NONE     FILLER             640     
+;;     640      640      .dynsym            736     
+;;     736      736      .dynstr            797     
+;;     ...
+;;
+;;     ;; view the contents of elf, as they exist in the file
+;;     (show-memory-layout *elf*)
+;;     addr     contents          end     
+;;     -------------------------------------
+;;     0x400000 LOAD               0x4006CC
+;;     0x400040 PHDR               0x400200
+;;     0x400200 INTERP             0x40021C
+;;     0x400200 .interp            0x40021C
+;;     0x40021C NOTE               0x400260
+;;     0x40021C .note.ABI-tag      0x40023C
+;;     ...
+;;
+;; write an elf object to disk 
+;; ----------------------------
+;; We can write out the elf file to disk.
+;;
+;;     ;; write out the elf file, the results should be identical to
+;;     ;; the original
+;;     (write-elf *elf* "hello2")
+;;
+;; The resulting file will be identical to the original file from
+;; which the elf object was read.
+;;
+;;     diff hello hello2
+;;
+;; manipulate the contents of an elf object 
+;; -----------------------------------------
+;; We can manipulate these elf objects, and then write the results
+;; back out to disk.  For example we can change the code in the
+;; `.text` section of the file, and then write the results back out to
+;; disk.
+;;
+;;     ;; change the .text section -- this doesn't break the program
+;;     (aref (data (named-section *elf* ".text")) 40) ; => 144
+;;     (setf (aref (data (named-section *elf* ".text")) 40) #xc3)
+;;     (aref (data (named-section *elf* ".text")) 40) ; => 195
+;;
+;;     ;; When we write the modified elf to a file, the resulting file
+;;     ;; will be different than the original hello (in one byte) but
+;;     ;; will still execute since we changed a byte off of the
+;;     ;; execution path
+;;     (write-elf *elf* "hello2")
+;;
+;; Meta information like the relevant program and section headers, as
+;; well as symbol information in the `.dynamic` section of the file
+;; will be automatically updated.
+;;
+;;     (let ((text (named-section *elf* ".text")))
+;;       (setf (data text)
+;;             (concatenate 'vector
+;;                          (data text)
+;;                          (make-array 16 :initial-element #x90))))
+;;     (write-elf *elf* "hello3")
+;;
+;; Note however that the resulting file will segfault on evaluation,
+;; because even though the meta-data of the elf file is updated
+;; automatically, there are hard-coded offsets and memory locations in
+;; the compiled data contained in the elf file, which can not be
+;; automatically updated.
 
 ;;; Code:
 (in-package #:elf)
