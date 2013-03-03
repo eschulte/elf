@@ -16,7 +16,7 @@
    :type)
   (:export
    ;; dynamic variables
-   :*calculate-edits*
+   :*calculate-edits* :*endian* :*class*
    ;; functions
    :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
@@ -28,7 +28,7 @@
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
    :filesz :memsz :align :sym-name :other :value :shndx :disasm
-   :rel-sym :rel-type :rel-info
+   :rel-sym :rel-type :rel-info :magic-number
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class

@@ -23,8 +23,9 @@
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
-
 (in-package #:elf)
+
+(load "util.lisp")
 
 
 ;;; Basic Binary types
@@ -1096,11 +1097,13 @@ Note: the output should resemble the output of readelf -r."
 (defun objdump-parse (output)
   "Parse the output of `objdump' returning the disassembly by symbol."
   (let ((lines (split-sequence #\Newline output))
-        (sec-header (lambda-registers (addr name) "^([0-9a-f]+) <(.+)>:$"
-                      (cons (parse-integer addr :radix 16) name))))
+        (sec-header (lambda (line)
+                      (multiple-value-bind (matchedp matches)
+                          (scan-to-strings "^([0-9a-f]+) <(.+)>:$" line)
+                        (when matchedp
+                          (cons (parse-integer (aref matches 0) :radix 16)
+                                (aref matches 1)))))))
     (mapcar #'list
             (remove nil (mapcar sec-header lines))
             (mapcar #'parse-addresses
                     (cdr (split-sequence-if sec-header lines))))))
-
-;;; elf.lisp ends here
