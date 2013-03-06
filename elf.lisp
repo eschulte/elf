@@ -39,10 +39,10 @@
 ;;
 ;;     (defvar *elf* (read-elf "hello"))
 ;;
-;; Using the `show-it` function from the elf-test package we can
-;; inspect the header at the top of the elf file.
+;; Using the `show-it` function from the elf package we can inspect
+;; the header at the top of the elf file.
 ;;
-;;     (elf-test:show-it (header *elf*) :out nil)
+;;     (elf::show-it (header *elf*) :out nil)
 ;;
 ;; view section-table and program-table information 
 ;; -------------------------------------------------
@@ -56,7 +56,7 @@
 ;; and when it is an executable image in memory.
 ;;
 ;;     ;; looking at the program table
-;;     (mapc #'elf-test:show-it (program-table *elf*))
+;;     (mapc #'elf::show-it (program-table *elf*))
 ;;     TYPE:PHDR FLAGS:5 OFFSET:64 VADDR:4194368 PADDR:4194368 FILE...
 ;;     TYPE:INTERP FLAGS:4 OFFSET:512 VADDR:4194816 PADDR:4194816 F...
 ;;     TYPE:LOAD FLAGS:5 OFFSET:0 VADDR:4194304 PADDR:4194304 FILES...
