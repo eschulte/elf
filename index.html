@@ -152,10 +152,10 @@ number at the start of the file.</p>
 <pre><code>(defvar *elf* (read-elf "hello"))
 </code></pre>
 
-<p>Using the <code>show-it</code> function from the elf-test package we can
-inspect the header at the top of the elf file.</p>
+<p>Using the <code>show-it</code> function from the elf package we can inspect
+the header at the top of the elf file.</p>
 
-<pre><code>(elf-test:show-it (header *elf*) :out nil)
+<pre><code>(elf::show-it (header *elf*) :out nil)
 </code></pre>
 
 <h2>view section-table and program-table information </h2>
@@ -171,7 +171,7 @@ layout of the elements of the elf file, both in it's binary file
 and when it is an executable image in memory.</p>
 
 <pre><code>;; looking at the program table
-(mapc #'elf-test:show-it (program-table *elf*))
+(mapc #'elf::show-it (program-table *elf*))
 TYPE:PHDR FLAGS:5 OFFSET:64 VADDR:4194368 PADDR:4194368 FILE...
 TYPE:INTERP FLAGS:4 OFFSET:512 VADDR:4194816 PADDR:4194816 F...
 TYPE:LOAD FLAGS:5 OFFSET:0 VADDR:4194304 PADDR:4194304 FILES...
