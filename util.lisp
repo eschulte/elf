@@ -33,12 +33,24 @@
   #-(or sbcl clisp ccl)
   (error "no temporary file backend for this lisp."))
 
+(defmacro with-temp-file (file &rest body)
+  "SPEC is the variable used to reference the file w/optional extension.
+After BODY is executed the temporary file is removed."
+  `(let ((,file (temp-file-name)))
+     (unwind-protect (progn ,@body)
+       (when (probe-file ,file) (delete-file ,file)))))
+
 (defun trim (str &key (chars '(#\Space #\Tab #\Newline)))
   (loop until (or (emptyp str) (not (member (aref str 0) chars)))
      do (setf str (subseq str 1)))
   (loop until (or (emptyp str) (not (member (aref str (1- (length str))) chars)))
      do (setf str (subseq str 0 (1- (length str)))))
   str)
+
+(defun shell (command)
+  #+ecl          (ext:system command)
+  #+ccl          (shell-command command :input "")
+  #-(or ccl ecl) (shell-command command))
 
 ;;; generic forensic functions over arbitrary objects
 (defun my-slot-definition-name (el)

@@ -6,7 +6,6 @@
    :metabang-bind
    :elf
    :stefil
-   :trivial-shell
    :trivial-timeout)
   (:shadow :type)
   (:export :run-elf-tests :test))

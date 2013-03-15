@@ -40,7 +40,7 @@
   (let ((*test-class* :64-bit)) (test)))
 
 (defun system-class ()
-  (ecase (parse-integer (shell-command "getconf LONG_BIT"))
+  (ecase (parse-integer (elf::shell "getconf LONG_BIT"))
     (32 :32-bit)
     (64 :64-bit)))
 
@@ -73,8 +73,8 @@
     (is (probe-file *tmp-file*))
     #-ccl
     (when (equal (system-class) *test-class*)
-      (shell-command (format nil "chmod +x ~a" *tmp-file*))
-      (is (equal "hello world" (elf::trim (shell-command *tmp-file*)))))))
+      (elf::shell (format nil "chmod +x ~a" *tmp-file*))
+      (is (equal "hello world" (elf::trim (elf::shell *tmp-file*)))))))
 
 (deftest test-tweaked-text-working-executable ()
   (with-fixture hello-elf
@@ -84,8 +84,8 @@
     (is (probe-file *tmp-file*))
     #-ccl
     (when (equal (system-class) *test-class*)
-      (shell-command (format nil "chmod +x ~a" *tmp-file*))
-      (is (equal "hello world" (elf::trim (shell-command *tmp-file*)))))))
+      (elf::shell (format nil "chmod +x ~a" *tmp-file*))
+      (is (equal "hello world" (elf::trim (elf::shell *tmp-file*)))))))
 
 (deftest test-data-setf-changes ()
   (with-fixture hello-elf

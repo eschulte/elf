@@ -1184,12 +1184,9 @@ Note: the output should resemble the output of readelf -r."
 ;;; disassembly functions using objdump from GNU binutils
 (defmethod objdump ((sec section))
   "Use objdump to return the disassembly of SEC."
-  (let ((path (temp-file-name)))
+  (with-temp-file path
     (write-elf (elf sec) path)
-    (unwind-protect
-         #-ecl (shell-command (format nil "objdump -j ~a -d ~a" (name sec) path))
-         #+ecl (ext:system    (format nil "objdump -j ~a -d ~a" (name sec) path))
-         (delete-file path))))
+    (shell (format nil "objdump -j ~a -d ~a" (name sec) path))))
 
 (defun parse-addresses (lines)
   "Parse addresses from lines of objdump output."
