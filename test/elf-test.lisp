@@ -123,7 +123,7 @@
                     (apply #'append
                            (apply #'append
                                   (mapcar
-                                   (lambda (sym) (mapcar #'second (second sym)))
+                                   (lambda (sym) (mapcar #'second (cdr sym)))
                                    (objdump-parse (objdump .text))))))))))
 
 (deftest test-addresses-compared-w/objdump-output ()
