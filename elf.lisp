@@ -1019,6 +1019,7 @@ section (in the file)."
       ;; sec-deltas should be in increasing order by offset w/o changed section
       (setq sec-deltas (nreverse (butlast sec-deltas)))
       ;; update the dynamic symbols used at run time
+      #+do-dyn-update ;; TODO: check if this ever /causes/ execution errors
       (let ((ds (make-array (length data) :initial-element 0)))
         (flet ((adj (address)
                  (+ address
@@ -1029,7 +1030,6 @@ section (in the file)."
                         ;; after the changed section
                         (or (cdr (assoc-if (lambda (p) (> address p)) sec-deltas))
                             0)))))
-          ;; TODO: check that these changes to ever /cause/ execution errors
           (dolist (sym (data (named-section elf ".dynsym")))
             (with-slots (value) sym
               (setf value (adj value))))
