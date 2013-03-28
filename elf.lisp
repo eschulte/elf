@@ -1216,7 +1216,7 @@ Note: the output should resemble the output of readelf -r."
                         (when matchedp
                           (cons (parse-integer (aref matches 0) :radix 16)
                                 (aref matches 1)))))))
-    (mapcar #'list
+    (mapcar #'cons
             (remove nil (mapcar sec-header lines))
             (mapcar #'parse-addresses
                     (cdr (split-sequence-if sec-header lines))))))

@@ -138,7 +138,7 @@
                                (declare (ignorable _))
                                (prog1 addr (incf addr))) bytes))
                    (apply #'append
-                          (mapcar #'second
+                          (mapcar #'cdr
                                   (objdump-parse
                                    (objdump (named-section *elf* ".text")))))))
            (let ((addr (address (sh .text))))
