@@ -524,6 +524,8 @@
     (:64-bit 'elf-rel-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+(defgeneric rel-sym (rel)
+  (:documentation "Shift bits in REL based on its class."))
 (defmethod rel-sym ((rel elf-rel))
   (ash (info rel)
        (ecase (class-name (class-of rel))
@@ -587,8 +589,10 @@
      (43 . :num)))
   "Association list of type meaning by machine type.")
 
+(defgeneric rel-type (rel header)
+  (:documentation "The interpretation of the type is machine specific."))
+
 (defmethod rel-type ((rel elf-rel) (header elf-header))
-  "The interpretation of the type is machine specific."
   (let ((val (logand (info rel)
                      (ecase (class-name (class-of rel))
                        ((elf-rel-32 elf-rela-32) #xff)
@@ -677,9 +681,13 @@
     (:64-bit 'elf-dyn-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+(defgeneric word-size (dyn)
+  (:documentation "Return the word size for the given class."))
+
 (defmethod word-size ((dyn elf-dyn-32)) 4)
 (defmethod word-size ((dyn elf-dyn-64)) 8)
 
+(defgeneric un-type (dyn))
 (defmethod un-type ((dyn elf-dyn))
   (let ((val (list :pltrel :relent :relsz :rpath :soname :syment
                    :strsz :relaent :relasz :pltrelsz :needed))
@@ -690,17 +698,21 @@
           ((member (tag dyn) ptr)     :ptr)
           ((member (tag dyn) ignored) :ignored))))
 
+(defgeneric ptr (dyn))
 (defmethod ptr ((dyn elf-dyn))
   (when (equal (un-type dyn) :ptr) (bytes-to-int (un dyn))))
 
+(defgeneric (setf ptr) (new dyn))
 (defmethod (setf ptr) (new (dyn elf-dyn))
   (if (equal :ptr (un-type dyn))
       (setf (un dyn) (coerce (int-to-bytes new (word-size dyn)) 'vector))
       (error "Can't set ptr for dynamic section of type ~a" (tag dyn))))
 
+(defgeneric val (dyn))
 (defmethod val ((dyn elf-dyn))
   (when (equal (un-type dyn) :val) (bytes-to-int (un dyn) 'signed)))
 
+(defgeneric (setf val) (new dyn))
 (defmethod (setf val) (new (dyn elf-dyn))
   (if (equal :val (un-type dyn))
       (setf (un dyn) (coerce (int-to-bytes
@@ -716,6 +728,7 @@
                           tags :test #'string=))))
     (when (and dyn (equal (vma sec) (ptr dyn))) dyn)))
 
+(defgeneric binding (sym))
 (defmethod binding ((sym elf-sym))
   (let ((val (ash (info sym) -4)))
     (case val
@@ -749,9 +762,12 @@
   (when (and (ph sec) (= (offset sec) (offset (ph sec))))
     (setf (offset (ph sec)) new)))
 
+(defgeneric vma (section)
+  (:documentation "Return the virtual memory address for SECTION."))
 (defmethod vma ((sec section))
   (when (ph sec) (+ (vaddr (ph sec)) (- (offset sec) (offset (ph sec))))))
 
+(defgeneric (setf vma) (new section))
 (defmethod (setf vma) (new (sec section))
   (declare (ignorable new))
   (error "Don't set the VMA, this is calculated from the ph and offset."))
@@ -781,9 +797,11 @@
   (declare (ignorable new))
   (error "TODO: setting flags not yet implemented"))
 
+(defgeneric alignment (section))
 (defmethod alignment ((sec section))
   (if (ph sec) (align (ph sec)) (addralign (sh sec))))
 
+(defgeneric (setf alignment) (new section))
 (defmethod (setf alignment) (new (sec section))
   (declare (ignorable new))
   (error "TODO: setting alignment is not yet implemented"))
@@ -807,7 +825,7 @@ section (in the file)."
                           pt) (lambda (a b) (> (filesz a) (filesz b))))))
 
 (defmethod read-value ((type (eql 'elf)) in &key)
-  "Read an elf object from a binary input stream."
+  ;; Read an elf object from a binary input stream.
   (let ((e (make-instance 'elf)))
     (with-slots (header section-table program-table sections ordering) e
       (setf
@@ -897,7 +915,7 @@ section (in the file)."
     e))
 
 (defmethod write-value ((type (eql 'elf)) out value &key)
-  "Write an elf object to a binary output stream."
+  ;; Write an elf object to a binary output stream.
   (with-slots (header section-table program-table sections ordering) value
     (flet ((write-bytes (bytes)
              (dolist (b (coerce bytes 'list)) (write-byte b out))))
@@ -964,8 +982,10 @@ section (in the file)."
        ordering (generic-copy (ordering elf))))
     e))
 
+(defgeneric (setf data) (new section)
+  (:documentation
+"Update the contents of section to new, and update all headers appropriately."))
 (defmethod (setf data) (new (sec section))
-  "Update the contents of section to new, and update all headers appropriately."
   ;; step through the ordered sections, updating where required
   (with-slots (elf sh name data) sec
     (let* ((old-length (* (length data) (if (vectorp data) 1 (entsize sh))))
@@ -1046,8 +1066,9 @@ section (in the file)."
   "Return the section in ELF named NAME."
   (first (remove-if (lambda (sec) (not (string= name (name sec)))) (sections elf))))
 
+(defgeneric symbols (elf)
+  (:documentation "Return the symbols contained in ELF."))
 (defmethod symbols ((elf elf))
-  "Return the symbols contained in ELF."
   (data (named-section elf ".symtab")))
 
 (defun named-symbol (elf name)
@@ -1182,8 +1203,9 @@ Note: the output should resemble the output of readelf -r."
 
 
 ;;; disassembly functions using objdump from GNU binutils
+(defgeneric objdump (section)
+  (:documentation "Use objdump to return the disassembly of SEC."))
 (defmethod objdump ((sec section))
-  "Use objdump to return the disassembly of SEC."
   (with-temp-file path
     (write-elf (elf sec) path)
     (shell (format nil "objdump -j ~a -d ~a" (name sec) path))))
