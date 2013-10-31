@@ -18,7 +18,8 @@
    ;; dynamic variables
    :*calculate-edits* :*endian* :*class*
    ;; functions
-   :bytes-to-int :int-to-bytes :named-section :elf-p :read-elf :write-elf
+   :bytes-to-int :int-to-bytes :named-section :elf-p :elf-header
+   :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
    ;; disassembly functions

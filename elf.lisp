@@ -33,6 +33,11 @@
 ;;
 ;;     (elf-p "hello") ; => T
 ;;
+;; We can also view an elf files header information without parsing
+;; the entire file.
+;;
+;;     (elf::show-it (elf-header "hello") :out nil)
+;;
 ;; read an elf object, and view it's header information 
 ;; ----------------------------------------------------
 ;; Then we read the binary file into an elf object.
@@ -1081,6 +1086,10 @@ section (in the file)."
   (with-open-file (in file :element-type '(unsigned-byte 8))
     (string= (concatenate 'string (string (code-char #x7f)) "ELF")
              (read-value 'string in :length 4))))
+
+(defun elf-header (file)
+  (with-open-file (in file :element-type '(unsigned-byte 8))
+    (read-value 'elf-header in)))
 
 (defun read-elf (file)
   (with-open-file (in file :element-type '(unsigned-byte 8))
