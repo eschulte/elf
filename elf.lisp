@@ -414,16 +414,6 @@
    (1879048186 . :sunwbss)
    (1879048187 . :sunwstack)))
 
-(define-elf-dictionary ph-flag 4
-  ((0 . :none)
-   (1 . :executable)
-   (2 . :write)
-   (3 . :write-execute)
-   (4 . :read)
-   (5 . :read-execute)
-   (6 . :read-write)
-   (7 . :read-write-execute)))
-
 ;; .dynamic section tag
 (define-elf-dictionary dyn-tag 4
   ((0  . :null)
@@ -502,7 +492,7 @@
    (paddr  addr)
    (filesz word)
    (memsz  word)
-   (flags  ph-flag)
+   (flags  word)
    (align  word)))
 
 (define-binary-class program-header-64 ()
