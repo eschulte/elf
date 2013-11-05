@@ -485,6 +485,27 @@
    (addralign xword)
    (entsize   xword)))
 
+;; Program Header flag permissions
+;; 
+(defvar pf-x        #x1        "Program header flag execute bit.")
+(defvar pf-w        #x2        "Program header flag write bit.")
+(defvar pf-r        #x3        "Program header flag read bit.")
+(defvar pf-maskos   #x0ff00000 "Program header flag Unspecified bit.")
+(defvar pf-maskproc #xf0000000 "Program header flag Unspecified bit.")
+;;
+;; Possible values and meanings.
+;;
+;; | Flags          | Value | Exact                | Allowable            |
+;; |----------------+-------+----------------------+----------------------|
+;; | none           |     0 | All access denied    | All access denied    |
+;; | PF_X           |     1 | Execute only         | Read, execute        |
+;; | PF_W           |     2 | Write only           | Read, write, execute |
+;; | PF_W+PF_X      |     3 | Write, execute       | Read, write, execute |
+;; | PF_R           |     4 | Read only            | Read, execute        |
+;; | PF_R+PF_X      |     5 | Read, execute        | Read, execute        |
+;; | PF_R+PF_W      |     6 | Read, write          | Read, write, execute |
+;; | PF_R+PF_W+PF_X |     7 | Read, write, execute | Read, write, execute |
+
 (define-binary-class program-header-32 ()
   ((type   ph-type)
    (offset off)
