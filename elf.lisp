@@ -1087,9 +1087,18 @@ section (in the file)."
     (string= (concatenate 'string (string (code-char #x7f)) "ELF")
              (read-value 'string in :length 4))))
 
+(defun elf-header-endianness-warn (header)
+  "Raise a warning if HEADER was read using the wrong endianness."
+  (when (if (eq *endian* :little)
+            (= (data-encoding header) 2)
+            (= (data-encoding header) 1))
+    (warn "Header read with wrong encoding ~S while data-encoding ~S."
+          *endian* (data-encoding header)))
+  header)
+
 (defun elf-header (file)
   (with-open-file (in file :element-type '(unsigned-byte 8))
-    (read-value 'elf-header in)))
+    (elf-header-endianness-warn (read-value 'elf-header in))))
 
 (defun read-elf (file)
   (with-open-file (in file :element-type '(unsigned-byte 8))
