@@ -200,7 +200,7 @@
                               (car (rassoc val ',dictionary))) ,signed)))))
 
 ;; integers and bytes
-(defvar *endian* 'little
+(defvar *endian* :little
   "Controls the endianness of how bytes are read.")
 
 (defvar *class* nil
@@ -214,7 +214,7 @@
   (unless (listp bytes) (setf bytes (coerce bytes 'list)))
   (let ((value 0))
     (mapc (lambda (bit b) (setf (ldb (byte 8 bit) value) b))
-          (if (eq *endian* 'little) (reverse steps) steps) bytes)
+          (if (eq *endian* :little) (reverse steps) steps) bytes)
     (if (and signed-p (> value (expt 2 (1- (* 8 (length bytes))))))
         (- (expt 2 (1- (* 8 (length bytes)))) value)
         value)))
@@ -227,7 +227,7 @@
     (when (and signed-p (< int 0))
       (setf int (+ (expt 2 (1- (* 8 size))) (- 0 int))))
     (mapc (lambda (bit) (vector-push (ldb (byte 8 bit) int) buf))
-          (if (eq *endian* 'little) (reverse steps) steps))
+          (if (eq *endian* :little) (reverse steps) steps))
     buf))
 
 (defun bytes-from (in bytes &optional signed-p)
