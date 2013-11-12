@@ -10,7 +10,8 @@
                metabang-bind
                split-sequence
                #-ecl trivial-shell
-               cl-ppcre)
+               cl-ppcre
+               flexi-streams)
   :components ((:file "package")
                (:file "util" :depends-on ("package"))
                (:file "elf" :depends-on ("package" "util"))))

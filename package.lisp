@@ -9,6 +9,7 @@
    :split-sequence
    #-ecl :trivial-shell
    :cl-ppcre
+   :flexi-streams
    )
   (:shadow
    :class
