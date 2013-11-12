@@ -854,100 +854,98 @@ section (in the file)."
   ;; Read an elf object from a binary input stream.
   (let ((e (make-instance 'elf)))
     (with-slots (header section-table program-table sections ordering) e
-      (setf header (elf-header-endianness-warn (read-value 'elf-header in)))
-      (setf program-table
+      (setf header (elf-header-endianness-warn (read-value 'elf-header in))
+            program-table
             (unless (zerop (phoff header))
               (progn (file-position in (phoff header))
                      (loop for x from 0 to (1- (ph-num header))
                         collect
-                          (read-value (program-header-type) in)))))
-      (setf section-table
+                          (read-value (program-header-type) in))))
+            section-table
             (unless (zerop (shoff header))
               (progn (file-position in (shoff header))
                      (loop for x from 0 to (1- (sh-num header))
                         collect (read-value 'section-header in)))))
-      (cond
-        ((and (not section-table) (not program-table))
-         (warn "No section or program tables found.")
-         (setf sections nil ordering nil))
-        ((not section-table)
-         (warn "No section table found.")
-         (setf sections nil ordering nil))
-        ((not program-table)
-         (warn "No program table found.")
-         (setf sections nil ordering nil))
-        (:otherwise
-         (setf
-          sections
-          (let ((str-off (offset (nth (sh-str-ind header) section-table))))
-            (mapcar
-             (lambda (h)
-               (let ((section (make-instance 'section)))
-                 (with-slots (elf sh ph name data) section
-                   (setf
-                    elf e
-                    sh h
-                    ph (program-header-for-section program-table section)
-                    name (progn (file-position in (+ str-off (name h)))
-                                (read-value 'terminated-string in))
-                    data ;; data can vary based on the specific section
-                    (cond
-                      ((or (string= ".dynsym" name) (string= ".symtab" name))
-                       (file-position in (offset sh))
-                       (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                          collect (read-value (elf-sym-type) in)))
-                      ((string= ".dynamic" name)
-                       (file-position in (offset sh))
-                       (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                          collect (read-value (elf-dyn-type) in)))
-                      ((equal :rel (type sh))
-                       (file-position in (offset sh))
-                       (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                          collect (read-value (elf-rel-type) in)))
-                      ((equal :rela (type sh))
-                       (file-position in (offset sh))
-                       (loop for x from 0 to (1- (/ (size sh) (entsize sh)))
-                          collect (read-value (elf-rela-type) in)))
-                      (t
-                       (file-position in (offset h))
-                       (read-value 'raw-bytes in :length (size section))))))
-                 section))
-             section-table))
-          ordering
-          (let ((parts
-                 (remove-if
-                  (lambda (group) (zerop (car group)))
-                  (mapcar (lambda (sec) (list (offset sec) (size sec) (name sec)))
-                          sections))))
-            (flet ((read-at (beg size)
-                     (progn (file-position in beg)
-                            (read-value 'raw-bytes in :length size)))
-                   (add-part (offset size contents)
-                     (setf parts (cons (list offset size contents) parts))))
-              (add-part 0 (elf-header-size) :header)
-              (add-part (shoff header)     ; add section-table
-                        (* (sh-num header) (sh-ent-size header)) :section-table)
-              (add-part (phoff header)     ; add program-table
-                        (* (ph-num header) (ph-ent-size header)) :program-table)
-              (add-part (file-length in) 0 :end)
-              (setf parts (sort parts (lambda (a b) (< (first a) (first b)))))
-              ;; return ordered list of items with filler
-              (butlast ;; pop off the end marker
-               (mapcar ;; just return the identifier
-                (lambda (el) (car (last el)))
-                (nreverse
-                 (reduce
-                  (lambda (acc part)
-                    (bind ((((offset size name) &rest rest) acc))
-                      (declare (ignorable name rest))
-                      (let* ((end (+ offset size))
-                             (size (- (first part) end)))
-                        (if (> size 0) ; is there a gap insert those bytes
-                            (append
-                             (list part (list end size (read-at end size)))
-                             acc)
-                            (cons part acc)))))
-                  (cdr parts) :initial-value (list (car parts))))))))))))
+      ;; initialize the list of sections
+      (let ((str-off (when (and section-table (sh-str-ind header))
+                       (offset (nth (sh-str-ind header) section-table)))))
+        (flet ((header-to-section (h)
+                 (let ((section (make-instance 'section)))
+                   (with-slots (elf sh ph name data) section
+                     (setf elf e)
+                     (if section-table
+                         (setf sh h
+                               ph (program-header-for-section
+                                   program-table section))
+                         (setf sh nil
+                               ph h))
+                     (setf name
+                           (when str-off
+                             (progn (file-position in (+ str-off (name h)))
+                                    (read-value 'terminated-string in))))
+                     (setf
+                      data ;; data can vary based on the specific section
+                      (cond
+                        ((or (string= ".dynsym" name) (string= ".symtab" name))
+                         (file-position in (offset h))
+                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                            collect (read-value (elf-sym-type) in)))
+                        ((string= ".dynamic" name)
+                         (file-position in (offset h))
+                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                            collect (read-value (elf-dyn-type) in)))
+                        ((equal :rel (type h))
+                         (file-position in (offset h))
+                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                            collect (read-value (elf-rel-type) in)))
+                        ((equal :rela (type h))
+                         (file-position in (offset h))
+                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                            collect (read-value (elf-rela-type) in)))
+                        (t
+                         (file-position in (offset h))
+                         (read-value 'raw-bytes in :length (size section))))))
+                   section)))
+          (setf sections (mapcar #'header-to-section
+                                 (or section-table program-table)))))
+      ;; compile the ordering of the sections
+      (setf ordering
+       ;; return ordered list of items with filler
+       (butlast                         ; remove end of file marker
+        (mapcar                         ; just return the identifier
+         #'lastcar
+         (nreverse
+          (reduce
+           (lambda (acc part)
+             (let* ((prev (or (car acc) (list 0 0)))
+                    (prev-off (first prev))
+                    (prev-size (second prev))
+                    (prev-end (+ prev-off prev-size))
+                    (size (- (first part) prev-end)))
+               (if (> size 0) ; if there is a gap then insert those bytes
+                   (let ((data (progn (file-position in prev-end)
+                                      (read-value 'raw-bytes in :length size))))
+                     (append (list part (list prev-end size data)) acc))
+                   (cons part acc))))
+           (sort (append
+                  ;; special parts
+                  (list (list 0 (elf-header-size) :header))
+                  (unless (zerop (shoff header))
+                    (list (list (shoff header)
+                                (* (sh-num header) (sh-ent-size header))
+                                :section-table)))
+                  (unless (zerop (phoff header))
+                    (list (list (phoff header)
+                                (* (ph-num header) (ph-ent-size header))
+                                :program-table)))
+                  (list (list (file-length in) 0 :end)) ; include final bytes
+                  ;; sections
+                  (remove-if (lambda (part) (zerop (car part)))
+                             (mapcar (lambda-bind ((num sec))
+                                       (list (offset sec) (size sec) num))
+                                     (indexed sections))))
+                 (lambda (a b) (< (first a) (first b))))
+           :initial-value nil))))))
     ;; initialize symbol names in .symtab and .dynsym
     (mapcar #'name-symbols
             (remove nil
@@ -962,8 +960,8 @@ section (in the file)."
              (dolist (b (coerce bytes 'list)) (write-byte b out))))
       (dolist (chunk ordering)
         (cond
-          ((stringp chunk)              ; named section
-           (let ((sec (named-section value chunk)))
+          ((numberp chunk)              ; numbered section
+           (let ((sec (nth chunk (sections value))))
              (unless (equal :nobits (type sec))
                (cond
                  ((or (string= ".dynsym" (name sec))
