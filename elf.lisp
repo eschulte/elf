@@ -836,7 +836,36 @@
   ((header        :initarg :header        :accessor header)
    (section-table :initarg :section-table :accessor section-table)
    (program-table :initarg :program-table :accessor program-table)
+   ;; This list holds the actual data sections of the ELF file.  This
+   ;; list is populated using the section-table if it exists or the
+   ;; program-table otherwise.
    (sections      :initarg :sections      :accessor sections)
+   ;; The ordering list is used to write a modified ELF file back to
+   ;; disk.  It includes the header, section-table, and program-table,
+   ;; as well as all sections which contain data which lives in the
+   ;; ELF file.
+   ;;
+   ;; Every element of ordering is of the form (offset size value)
+   ;; where offset is the offset in the file at which the value should
+   ;; be written, size indicates the size of the value, and value
+   ;; indicates the value to be written.  Value may be :header,
+   ;; :section-table or :program-table to write the respective headers
+   ;; or an index into the sections list to write the data of that
+   ;; section.
+   ;;
+   ;; In some cases ELF files have sections with overlapping
+   ;; representations in the file (e.g., because some program data
+   ;; must start at offset 0 overlapping the elf header).  In these
+   ;; cases last section written will override previously written
+   ;; sections, and the sections are written in the order they appear
+   ;; in the ordering list.
+   ;;
+   ;; TODO: In those cases where multiple sections point to the same
+   ;;       file data, only one copy of the file data should exist,
+   ;;       and each section should point to the same copy (s.t.,
+   ;;       setting that data in one section will change it in all
+   ;;       sections).  Ideally more specialized sections should have
+   ;;       priority in setting data.
    (ordering      :initarg :ordering      :accessor ordering)))
 
 (defun program-header-for-section (pt sec)
@@ -852,106 +881,128 @@ section (in the file)."
 
 (defmethod read-value ((type (eql 'elf)) in &key)
   ;; Read an elf object from a binary input stream.
-  (let ((e (make-instance 'elf)))
-    (with-slots (header section-table program-table sections ordering) e
-      (setf header (elf-header-endianness-warn (read-value 'elf-header in))
-            program-table
-            (unless (zerop (phoff header))
-              (progn (file-position in (phoff header))
-                     (loop for x from 0 to (1- (ph-num header))
-                        collect
-                          (read-value (program-header-type) in))))
-            section-table
-            (unless (zerop (shoff header))
-              (progn (file-position in (shoff header))
-                     (loop for x from 0 to (1- (sh-num header))
-                        collect (read-value 'section-header in)))))
-      ;; initialize the list of sections
-      (let ((str-off (when (and section-table (sh-str-ind header))
-                       (offset (nth (sh-str-ind header) section-table)))))
-        (flet ((header-to-section (h)
-                 (let ((section (make-instance 'section)))
-                   (with-slots (elf sh ph name data) section
-                     (setf elf e)
-                     (if section-table
-                         (setf sh h
-                               ph (program-header-for-section
-                                   program-table section))
-                         (setf sh nil
-                               ph h))
-                     (setf name
-                           (when str-off
-                             (progn (file-position in (+ str-off (name h)))
-                                    (read-value 'terminated-string in))))
-                     (setf
-                      data ;; data can vary based on the specific section
-                      (cond
-                        ((or (string= ".dynsym" name) (string= ".symtab" name))
-                         (file-position in (offset h))
-                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
-                            collect (read-value (elf-sym-type) in)))
-                        ((string= ".dynamic" name)
-                         (file-position in (offset h))
-                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
-                            collect (read-value (elf-dyn-type) in)))
-                        ((equal :rel (type h))
-                         (file-position in (offset h))
-                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
-                            collect (read-value (elf-rel-type) in)))
-                        ((equal :rela (type h))
-                         (file-position in (offset h))
-                         (loop for x from 0 to (1- (/ (size h) (entsize h)))
-                            collect (read-value (elf-rela-type) in)))
-                        (t
-                         (file-position in (offset h))
-                         (read-value 'raw-bytes in :length (size section))))))
-                   section)))
-          (setf sections (mapcar #'header-to-section
-                                 (or section-table program-table)))))
-      ;; compile the ordering of the sections
-      (setf ordering
-       ;; return ordered list of items with filler
-       (butlast                         ; remove end of file marker
-        (mapcar                         ; just return the identifier
-         #'lastcar
-         (nreverse
-          (reduce
-           (lambda (acc part)
-             (let* ((prev (or (car acc) (list 0 0)))
-                    (prev-off (first prev))
-                    (prev-size (second prev))
-                    (prev-end (+ prev-off prev-size))
-                    (size (- (first part) prev-end)))
-               (if (> size 0) ; if there is a gap then insert those bytes
-                   (let ((data (progn (file-position in prev-end)
-                                      (read-value 'raw-bytes in :length size))))
-                     (append (list part (list prev-end size data)) acc))
-                   (cons part acc))))
-           (sort (append
-                  ;; special parts
-                  (list (list 0 (elf-header-size) :header))
-                  (unless (zerop (shoff header))
-                    (list (list (shoff header)
-                                (* (sh-num header) (sh-ent-size header))
-                                :section-table)))
-                  (unless (zerop (phoff header))
-                    (list (list (phoff header)
-                                (* (ph-num header) (ph-ent-size header))
-                                :program-table)))
-                  (list (list (file-length in) 0 :end)) ; include final bytes
-                  ;; sections
-                  (remove-if (lambda (part) (zerop (car part)))
-                             (mapcar (lambda-bind ((num sec))
-                                       (list (offset sec) (size sec) num))
-                                     (indexed sections))))
-                 (lambda (a b) (< (first a) (first b))))
-           :initial-value nil))))))
-    ;; initialize symbol names in .symtab and .dynsym
-    (mapcar #'name-symbols
-            (remove nil
-              (mapcar (lambda (name) (named-section e name))
-                      '(".symtab" ".dynsym"))))
-    e))
+  (flet ((raw-bytes (from size)
+                 (file-position in from)
+                 (read-value 'raw-bytes in :length size))
+         (range-minus (from take)
+           (cond
+             ((or (< (cdr take) (car from))   ; no overlap
+                  (> (car take) (cdr from)))
+              (list from))
+             ((and (<= (car take) (car from)) ; from front
+                   (<= (cdr take) (cdr from)))
+              (list (cons (cdr take) (cdr from))))
+             ((and (>= (cdr take) (cdr from)) ; from back
+                   (>= (car take) (car from)))
+              (list (cons (car from) (car take))))
+             ((and (>= (car take) (car from)) ; from middle
+                   (<= (cdr take) (cdr from)))
+              (list (cons (car from) (car take))
+                    (cons (cdr take) (cdr from))))
+             ((and (<= (car take) (car from)) ; complete overlap
+                   (>= (cdr take) (cdr from)))
+              nil)
+             (:otherwise (error "bad range-minus ~S" (list from take))))))
+    (let ((e (make-instance 'elf)))
+      (with-slots (header section-table program-table sections ordering) e
+        (setf header (elf-header-endianness-warn (read-value 'elf-header in))
+              program-table
+              (unless (zerop (phoff header))
+                (progn (file-position in (phoff header))
+                       (loop for x from 0 to (1- (ph-num header))
+                          collect
+                            (read-value (program-header-type) in))))
+              section-table
+              (unless (zerop (shoff header))
+                (progn (file-position in (shoff header))
+                       (loop for x from 0 to (1- (sh-num header))
+                          collect (read-value 'section-header in)))))
+        ;; initialize the list of sections
+        (let ((str-off (when (and section-table (sh-str-ind header))
+                         (offset (nth (sh-str-ind header) section-table)))))
+          (flet ((header-to-section (h)
+                   (let ((section (make-instance 'section)))
+                     (with-slots (elf sh ph name data) section
+                       (setf elf e)
+                       (if section-table
+                           (setf sh h
+                                 ph (program-header-for-section
+                                     program-table section))
+                           (setf sh nil
+                                 ph h))
+                       (setf name
+                             (when str-off
+                               (progn (file-position in (+ str-off (name h)))
+                                      (read-value 'terminated-string in))))
+                       (setf
+                        data ;; data can vary based on the specific section
+                        (cond
+                          ((or (string= ".dynsym" name)
+                               (string= ".symtab" name))
+                           (file-position in (offset h))
+                           (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                              collect (read-value (elf-sym-type) in)))
+                          ((string= ".dynamic" name)
+                           (file-position in (offset h))
+                           (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                              collect (read-value (elf-dyn-type) in)))
+                          ((equal :rel (type h))
+                           (file-position in (offset h))
+                           (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                              collect (read-value (elf-rel-type) in)))
+                          ((equal :rela (type h))
+                           (file-position in (offset h))
+                           (loop for x from 0 to (1- (/ (size h) (entsize h)))
+                              collect (read-value (elf-rela-type) in)))
+                          (t (raw-bytes (offset h) (size section))))))
+                     section)))
+            (setf sections (mapcar #'header-to-section
+                                   (or section-table program-table)))))
+        ;; compile the ordering of the sections
+        (let* ((parts (append
+                       ;; sections
+                       (remove-if (lambda-bind ((offset size num))
+                                    (declare (ignorable num))
+                                    ;; In the section table inconsequential
+                                    ;; sections are indicated by having an
+                                    ;; offset of 0, while in the program
+                                    ;; table an offset of 0 is common, but
+                                    ;; sections with 0 filesz may be ignored.
+                                    (zerop (if section-table offset size)))
+                                  (mapcar (lambda-bind ((num sec))
+                                            (list (offset sec) (size sec) num))
+                                          (indexed sections)))
+                       ;; special parts
+                       (list (list 0 (elf-header-size) :header))
+                       (unless (zerop (shoff header))
+                         (list (list (shoff header)
+                                     (* (sh-num header) (sh-ent-size header))
+                                     :section-table)))
+                       (unless (zerop (phoff header))
+                         (list (list (phoff header)
+                                     (* (ph-num header) (ph-ent-size header))
+                                     :program-table)))
+                       (list (list (file-length in) 0 :end))))
+               (filler
+                (mapcar
+                 (lambda-bind ((start . end))
+                   (list start (- end start) (raw-bytes start (- end start))))
+                 (remove-if
+                  (lambda-bind ((start . end)) (= start end))
+                  (reduce (lambda (left this)
+                            (mapcan (lambda (range) (range-minus range this)) left))
+                          (mapcar (lambda-bind ((off size data))
+                                    (declare (ignorable data))
+                                    (cons off (+ off size)))
+                                  parts)
+                          :initial-value (list (cons 0 (file-length in))))))))
+          (setf ordering (sort (append parts filler) #'< :key #'first))))
+      ;; initialize symbol names in .symtab and .dynsym
+      (mapcar #'name-symbols
+              (remove nil
+                (mapcar (lambda (name) (named-section e name))
+                        '(".symtab" ".dynsym"))))
+      e)))
 
 (defmethod write-value ((type (eql 'elf)) out value &key)
   ;; Write an elf object to a binary output stream.
