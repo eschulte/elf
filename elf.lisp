@@ -784,9 +784,12 @@
   (offset (or (sh sec) (ph sec))))
 
 (defmethod (setf offset) (new (sec section))
-  (setf (offset (sh sec)) new)
-  (when (and (ph sec) (= (offset sec) (offset (ph sec))))
-    (setf (offset (ph sec)) new)))
+  (if (sh sec)
+      (progn
+        (setf (offset (sh sec)) new)
+        (when (and (ph sec) (= (offset sec) (offset (ph sec))))
+          (setf (offset (ph sec)) new)))
+      (setf (offset (ph sec)) new)))
 
 (defgeneric vma (section)
   (:documentation "Return the virtual memory address for SECTION."))
@@ -803,7 +806,8 @@
 
 (defmethod (setf size) (new (sec section))
   (let ((delta (- new (size sec))))
-    (setf (size (sh sec)) new)
+    (when (sh sec)
+      (setf (size (sh sec)) new))
     (when (ph sec)
       ;; TODO: probably need a better test here at some point
       (when (= (filesz (ph sec)) (memsz (ph sec)))
@@ -811,10 +815,12 @@
       (setf (filesz (ph sec)) (+ delta (filesz (ph sec)))))))
 
 (defmethod type ((sec section))
-  (type (sh sec)))
+  (type (or (sh sec) (ph sec))))
 
 (defmethod (setf type) (new (sec section))
-  (setf (type (sh sec)) new))
+  (if (sh sec)
+      (setf (type (sh sec)) new)
+      (setf (type (ph sec)) new)))
 
 (defmethod flags ((sec section))
   (flags (concatenate 'list (ph sec) (sh sec))))
@@ -1004,41 +1010,57 @@ section (in the file)."
                         '(".symtab" ".dynsym"))))
       e)))
 
-(defmethod write-value ((type (eql 'elf)) out value &key)
+(defmethod write-value ((type (eql 'elf)) out value &key
+                        &aux (data (make-array
+                                    (caar (remove-if-not
+                                           (lambda (g) (eql (lastcar g) :end))
+                                           (ordering value)))
+                                    :element-type '(unsigned-byte 8)
+                                    :initial-element #x0)))
   ;; Write an elf object to a binary output stream.
   (with-slots (header section-table program-table sections ordering) value
-    (flet ((write-bytes (bytes)
-             (dolist (b (coerce bytes 'list)) (write-byte b out))))
-      (dolist (chunk ordering)
-        (cond
-          ((numberp chunk)              ; numbered section
-           (let ((sec (nth chunk (sections value))))
-             (unless (equal :nobits (type sec))
-               (cond
-                 ((or (string= ".dynsym" (name sec))
-                      (string= ".symtab" (name sec)))
-                  (dolist (sym (data sec))
-                    (write-value (elf-sym-type) out sym)))
-                 ((string= ".dynamic" (name sec))
-                  (dolist (dyn (data sec))
-                    (write-value (elf-dyn-type) out dyn)))
-                 ((equal :rel (type sec))
-                  (dolist (rel (data sec))
-                    (write-value (elf-rel-type) out rel)))
-                 ((equal :rela (type sec))
-                  (dolist (rel (data sec))
-                    (write-value (elf-rela-type) out rel)))
-                 (t (write-bytes (data sec)))))))
-          ((vectorp chunk)              ; raw filler
-           (write-bytes chunk))
-          ((eq :header chunk)           ; header
-           (write-value 'elf-header out header))
-          ((eq :section-table chunk)    ; section table
-           (mapc (lambda (c) (write-value 'section-header out c)) section-table))
-          ((eq :program-table chunk)    ; program table
-           (mapc (lambda (c)
-                   (write-value (program-header-type) out c))
-                 program-table)))))))
+    (macrolet
+        ((bytes (&rest body)
+           `(with-output-to-sequence (o :element-type '(unsigned-byte 8))
+              ,@body)))
+      (mapc (lambda-bind ((offset . bytes))
+              (loop :for n :below (length bytes)
+                 :do (setf (aref data (+ offset n)) (aref bytes n))))
+            (mapcar
+             (lambda-bind ((offset size data))
+               (declare (ignorable size))
+               (cons
+                offset
+                (cond
+                  ((numberp data)              ; numbered section
+                   (let ((sec (nth data (sections value))))
+                     (unless (equal :nobits (type sec))
+                       (cond
+                         ((or (string= ".dynsym" (name sec))
+                              (string= ".symtab" (name sec)))
+                          (bytes (dolist (sym (data sec))
+                                   (write-value (elf-sym-type) o sym))))
+                         ((string= ".dynamic" (name sec))
+                          (bytes (dolist (dyn (data sec))
+                                   (write-value (elf-dyn-type) o dyn))))
+                         ((equal :rel (type sec))
+                          (bytes (dolist (rel (data sec))
+                                   (write-value (elf-rel-type) o rel))))
+                         ((equal :rela (type sec))
+                          (bytes (dolist (rel (data sec))
+                                   (write-value (elf-rela-type) o rel))))
+                         (t (data sec))))))
+                  ((eq :header data)        ; header
+                   (bytes (write-value 'elf-header o header)))
+                  ((eq :section-table data) ; section table
+                   (bytes (mapc (lambda (c) (write-value 'section-header o c))
+                                section-table)))
+                  ((eq :program-table data) ; program table
+                   (bytes (mapc (lambda (c) (write-value (program-header-type) o c))
+                                program-table)))
+                  ((vectorp data) data)))) ; raw filler
+             ordering))))
+  (dolist (b (coerce data 'list)) (write-byte b out)))
 
 (defun copy-elf (elf)
   (unless (eql 'elf (class-name (class-of elf)))
