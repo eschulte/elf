@@ -781,7 +781,7 @@
    (data :initarg :data :reader data :writer set-data)))
 
 (defmethod offset ((sec section))
-  (offset (sh sec)))
+  (offset (or (sh sec) (ph sec))))
 
 (defmethod (setf offset) (new (sec section))
   (setf (offset (sh sec)) new)
@@ -799,7 +799,7 @@
   (error "Don't set the VMA, this is calculated from the ph and offset."))
 
 (defmethod size ((sec section))
-  (size (sh sec)))
+  (if (sh sec) (size (sh sec)) (filesz (ph sec))))
 
 (defmethod (setf size) (new (sec section))
   (let ((delta (- new (size sec))))
