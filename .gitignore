@@ -18,3 +18,8 @@ libelf-mono.a
 
 ## scratch buffer
 scratch.lisp
+
+# Ignore documentation, specifically
+# docs/SysV-ABI.pdf
+# docs/gabi41.pdf
+docs
