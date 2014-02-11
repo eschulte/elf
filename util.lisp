@@ -30,7 +30,9 @@
   (tempnam nil nil)
   #+ccl
   (ccl:temp-pathname)
-  #-(or sbcl clisp ccl)
+  #+allegro
+  (system:make-temp-file-name)
+  #-(or sbcl clisp ccl allegro)
   (error "no temporary file backend for this lisp."))
 
 (defmacro with-temp-file (file &rest body)
