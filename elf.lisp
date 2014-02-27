@@ -1322,9 +1322,10 @@ Note: the output should resemble the output of readelf -r."
          (mapcar (lambda (head)
                    (list (vaddr head) (memsz head) (type head)))
                  program-table)
-         (mapcar (lambda (sec)
-                   (list (address (sh sec)) (size sec) (name sec)))
-                 sections))) #'< :key #'car)))))
+         (when section-table
+           (mapcar (lambda (sec) (list (address (sh sec)) (size sec) (name sec)))
+                   sections))))
+       #'< :key #'car)))))
 
 
 ;;; disassembly functions using objdump from GNU binutils
