@@ -1274,51 +1274,48 @@ Note: the output should resemble the output of readelf -r."
 
 (defun show-file-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
-  (format
-   t "~:{~&~8a ~18a ~8a~}~%"
-   (cons (list 'offset 'contents 'end)
+  (let ((layout
          (mapcar (lambda-bind ((offset size data))
                    (list offset
                          ;; an identifier for the section data
                          (cond
-                           ((numberp data)
-                            (name (nth data (sections elf))))
+                           ((numberp data) (name (nth data (sections elf))))
                            ((stringp data) data)
                            ((vectorp data) :filler)
                            (t data))
                          ;; the size in the file
-                         (let ((sec (cond ((numberp data)
-                                           (nth data (sections elf)))
-                                          ((stringp data)
-                                           (named-section elf el))
-                                          (t nil))))
-                           (+ offset (if sec
-                                         (cond ((equal :nobits (type sec)) 0)
-                                               (t size))
+                         (let ((sec (cond
+                                      ((numberp data)(nth data (sections elf)))
+                                      ((stringp data) (named-section elf el))
+                                      (t nil))))
+                           (+ offset (if (and sec (equal :nobits (type sec)))
+                                         0
                                          size)))))
-                 (ordering elf)))))
+                 (ordering elf))))
+    (format t "~:{~&~8a ~18a ~8a~}~%" (cons (list 'offset 'contents 'end)
+                                            layout))))
 
 (defun show-memory-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
   (format t "~&addr     contents          end     ~%")
   (format t "-------------------------------------~%")
-  (last
-   (with-slots (sections section-table program-table) elf
-     (mapc
-      (lambda (trio)
-        (bind (((beg size name) trio))
-          (format t "~&0x~x ~18a 0x~x" beg name (+ beg size))))
-      (stable-sort
-       (remove-if
-        (lambda (trio) (zerop (first trio)))
-        (append
-         (mapcar (lambda (head)
-                   (list (vaddr head) (memsz head) (type head)))
-                 program-table)
-         (when section-table
-           (mapcar (lambda (sec) (list (address (sh sec)) (size sec) (name sec)))
-                   sections))))
-       #'< :key #'car)))))
+  (with-slots (sections section-table program-table) elf
+    (mapc
+     (lambda (trio)
+       (bind (((beg size name) trio))
+         (format t "~&0x~x ~18a 0x~x~%" beg name (+ beg size))))
+     (stable-sort
+      (remove-if
+       (lambda (trio) (zerop (first trio)))
+       (append
+        (mapcar (lambda (head)
+                  (list (vaddr head) (memsz head) (type head)))
+                program-table)
+        (when section-table
+          (mapcar (lambda (sec) (list (address (sh sec)) (size sec) (name sec)))
+                  sections))))
+      #'< :key #'car)))
+  nil)
 
 
 ;;; disassembly functions using objdump from GNU binutils
