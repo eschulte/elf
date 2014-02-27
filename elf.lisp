@@ -1274,36 +1274,29 @@ Note: the output should resemble the output of readelf -r."
 
 (defun show-file-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
-  (let ((beg 0))
-    (format
-     t "~:{~&~8a ~8a ~18a ~8a~}~%"
-     (cons
-      (list 'start 'offset 'contents 'end)
-      (mapcar
-       (lambda (el)
-         (let ((size (cond
-                       ((stringp el)
-                        (let ((sec (named-section elf el)))
-                          (cond
-                            ((equal :nobits (type sec)) 0)
-                            ((member (name sec) '(".dynsym" ".dynamic" ".symtab")
-                                     :test #'string=)
-                             (* (length (data sec)) (entsize (sh sec))))
-                            (t (length (data sec))))))
-                       ((vectorp el) (length el))
-                       ((eq :header el) (elf-header-size))
-                       ((eq :section-table el)
-                        (* (sh-ent-size (header elf)) (sh-num (header elf))))
-                       ((eq :program-table el)
-                        (* (ph-ent-size (header elf)) (ph-num (header elf))))
-                       (t (error "~&unknown ordering element:~a" el)))))
-           (list beg
-                 (if (stringp el)
-                     (offset (sh (named-section elf el)))
-                     :none)
-                 (cond ((stringp el) el) ((vectorp el) :filler) (t el))
-                 (setf beg (+ beg size)))))
-       (ordering elf))))))
+  (format
+   t "~:{~&~8a ~18a ~8a~}~%"
+   (cons (list 'offset 'contents 'end)
+         (mapcar (lambda-bind ((offset size data))
+                   (list offset
+                         ;; an identifier for the section data
+                         (cond
+                           ((numberp data)
+                            (name (nth data (sections elf))))
+                           ((stringp data) data)
+                           ((vectorp data) :filler)
+                           (t data))
+                         ;; the size in the file
+                         (let ((sec (cond ((numberp data)
+                                           (nth data (sections elf)))
+                                          ((stringp data)
+                                           (named-section elf el))
+                                          (t nil))))
+                           (+ offset (if sec
+                                         (cond ((equal :nobits (type sec)) 0)
+                                               (t size))
+                                         size)))))
+                 (ordering elf)))))
 
 (defun show-memory-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
