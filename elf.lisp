@@ -1286,7 +1286,7 @@ Note: the output should resemble the output of readelf -r."
                          ;; the size in the file
                          (let ((sec (cond
                                       ((numberp data)(nth data (sections elf)))
-                                      ((stringp data) (named-section elf el))
+                                      ((stringp data) (named-section elf data))
                                       (t nil))))
                            (+ offset (if (and sec (equal :nobits (type sec)))
                                          0
