@@ -24,7 +24,7 @@
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
    ;; disassembly functions
-   :objdump :parse-addresses :objdump-parse
+   :objdump-cmd :objdump :parse-addresses :objdump-parse
    ;; methods
    :un-type :ptr  :val :binding :offset  :vma 
    :size  :type  :flags :alignment :read-value :write-value

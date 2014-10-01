@@ -1318,28 +1318,29 @@ Note: the output should resemble the output of readelf -r."
   nil)
 
 
-;;; disassembly functions using objdump from GNU binutils
+;;; Disassembly functions using objdump from GNU binutils
+(defvar objdump-cmd "objdump" "Name of the objdump executable.")
+
 (defgeneric objdump (section)
   (:documentation "Use objdump to return the disassembly of SEC."))
 (defmethod objdump ((sec section))
   (with-temp-file path
     (write-elf (elf sec) path)
-    (shell (format nil "objdump -j ~a -d ~a" (name sec) path))))
+    (shell (format nil "~a -j ~a -d ~a" objdump-cmd (name sec) path))))
 
 (defun parse-addresses (lines)
   "Parse addresses from lines of objdump output."
   (mapcar
    (lambda (line)
-     (list
-      ;; address in memory
-      (parse-integer (subseq line 1 8) :radix 16)
-      ;; bytes
-      (mapcar (lambda (num) (parse-integer num :radix 16))
-              (split-sequence
-               #\Space
-               (trim  (subseq line 10 (if (> (length line) 32) 31 nil)))))
-      ;; disassembled assembly text
-      (when (> (length line) 31) (trim (subseq line 32)))))
+     (destructuring-bind (address-str bytes-str . disasm-str)
+         (split-sequence #\Tab line)
+       (list
+        (parse-integer (trim address-str) :radix 16 :junk-allowed t)
+        ;; bytes
+        (mapcar (lambda (num) (parse-integer num :radix 16))
+                (split-sequence #\Space (trim bytes-str)))
+        ;; disassembled assembly text
+        (format nil "~{~a~^ ~}" disasm-str))))
    (remove-if (lambda (line)
                 (or (< (length line) 9)
                     (not (equal #\: (aref line 8)))))
@@ -1352,8 +1353,9 @@ Note: the output should resemble the output of readelf -r."
                       (multiple-value-bind (matchedp matches)
                           (scan-to-strings "^([0-9a-f]+) <(.+)>:$" line)
                         (when matchedp
-                          (cons (parse-integer (aref matches 0) :radix 16)
-                                (aref matches 1)))))))
+                          (cons
+                           (parse-integer (aref matches 0) :radix 16)
+                           (aref matches 1)))))))
     (mapcar #'cons
             (remove nil (mapcar sec-header lines))
             (mapcar #'parse-addresses
