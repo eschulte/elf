@@ -886,10 +886,19 @@ section (in the file)."
                           pt) (lambda (a b) (> (filesz a) (filesz b))))))
 
 (defmethod read-value ((type (eql 'elf)) in &key)
+  (elf-read-value type in))
+
+(defmethod read-value ((type (eql 'objdump)) in &key)
+  (elf-read-value type in))
+
+(defmethod read-value ((type (eql 'csurf)) in &key)
+  (elf-read-value type in))
+
+(defun elf-read-value (type in)
   ;; Read an elf object from a binary input stream.
   (flet ((raw-bytes (from size)
-                 (file-position in from)
-                 (read-value 'raw-bytes in :length size))
+           (file-position in from)
+           (read-value 'raw-bytes in :length size))
          (range-minus (from take)
            (cond
              ((or (< (cdr take) (car from))   ; no overlap
@@ -909,7 +918,7 @@ section (in the file)."
                    (>= (cdr take) (cdr from)))
               nil)
              (:otherwise (error "bad range-minus ~S" (list from take))))))
-    (let ((e (make-instance 'elf)))
+    (let ((e (make-instance type)))
       (with-slots (header section-table program-table sections ordering) e
         (setf header (elf-header-endianness-warn (read-value 'elf-header in))
               program-table
@@ -1207,9 +1216,9 @@ section (in the file)."
   (with-open-file (in file :element-type '(unsigned-byte 8))
     (elf-header-endianness-warn (read-value 'elf-header in))))
 
-(defun read-elf (file)
+(defun read-elf (file &optional (type 'elf))
   (with-open-file (in file :element-type '(unsigned-byte 8))
-    (read-value 'elf in)))
+    (read-value type in)))
 
 (defun write-elf (elf file)
   (with-open-file (out file :direction :output :element-type '(unsigned-byte 8))
@@ -1318,15 +1327,24 @@ Note: the output should resemble the output of readelf -r."
   nil)
 
 
+;;; Disassembly functions
+(defclass disassemblable (elf) ())
+(defclass objdump (disassemblable) ())
+(defclass csurf (disassemblable)
+  ((project :initarg :project :accessor project :initform nil)))
+
+(defgeneric disassemble-section (disassemblable section)
+  (:documentation
+   "Return the disassembly of the contents of SECTION in DISASM."))
+
+
 ;;; Disassembly functions using objdump from GNU binutils
 (defvar objdump-cmd "objdump" "Name of the objdump executable.")
 
-(defgeneric objdump (section)
-  (:documentation "Use objdump to return the disassembly of SEC."))
-(defmethod objdump ((sec section))
+(defun objdump (section)
   (with-temp-file path
-    (write-elf (elf sec) path)
-    (shell (format nil "~a -j ~a -d ~a" objdump-cmd (name sec) path))))
+    (write-elf (elf section) path)
+    (shell (format nil "~a -j ~a -d ~a" objdump-cmd (name section) path))))
 
 (defun parse-addresses (lines)
   "Parse addresses from lines of objdump output."
@@ -1360,3 +1378,49 @@ Note: the output should resemble the output of readelf -r."
             (remove nil (mapcar sec-header lines))
             (mapcar #'parse-addresses
                     (cdr (split-sequence-if sec-header lines))))))
+
+(defmethod disassemble-section ((elf objdump) section-name)
+  (mapcan #'cdr (objdump-parse (objdump (named-section elf section-name)))))
+
+
+;;; Disassembly functions using csurf from GrammaTech
+(defvar csurf-cmd "csurf -nogui")
+
+(defvar csurf-script
+  (make-pathname
+   :directory
+   (pathname-directory #.(or *compile-file-truename*
+                             *load-truename*
+                             *default-pathname-defaults*))
+   :name "sections"
+   :type "stk"))
+
+(defmethod csurf-ins (project section)
+  (multiple-value-bind (stdout stderr errno)
+      (shell (format nil "~a ~a -l ~a -- ~a"
+                     csurf-cmd project csurf-script section))
+    (unless (zerop errno)
+      (error "csurf failed with ~s" stderr))
+    ;; parse addresses
+    (mapcar (lambda (line)
+              (multiple-value-bind (matchp matches)
+                  (scan-to-strings "^([0-9]+)[\\s]+(.*)$" line)
+                (declare (ignorable matchp))
+                (cons (parse-integer (aref matches 0))
+                      (aref matches 1))))
+            (split-sequence #\Newline stdout :remove-empty-subseqs t))))
+
+(defmethod disassemble-section ((elf csurf) section-name &aux last)
+  ;; Implementation of disasm using the objdump support provided by
+  ;; the ELF library.
+  (let ((data (data (named-section elf section-name)))
+        (offset (address (sh (named-section elf section-name)))))
+    (cdr (mapcar (lambda (pair)
+                   (prog1 (when last
+                            (list (+ (car last) offset)
+                                  (coerce (subseq data (car last) (car pair))
+                                          'list)
+                                  (cdr last)))
+                     (setf last pair)))
+                 (append (csurf-ins (project elf) section-name)
+                         (list (cons (length data) "NO disasm")))))))

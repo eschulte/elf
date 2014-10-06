@@ -1,0 +1,76 @@
+(load "/home/eschulte/work/src/arm/src/utility.stk")
+
+(define (ast-top-sections)
+  (apply append (map (compose ast-children (rcurry ast-field :arm:sections))
+                     (filter (rcurry ast-is-a? arm:module)
+                             (remove #f (map (rcurry file-ast 'ast)
+                                             (sdg-uids)))))))
+
+(define (ast-all-sections)
+  (letrec ((helper
+            (lambda (it)
+              (case (car it)
+                (:arm:section (list (cdr it)))
+                (:arm:sections (apply append
+                                 (map helper (ast-children (cdr it)))))))))
+    (apply append (map helper (ast-top-sections)))))
+
+(define (ast-name ast)
+  (when (ast-has-field? ast :arm:name)
+        (ast-field ast :arm:name)))
+
+(define (ast-named-section name)
+  (let ((matches (filter (compose (lcurry equal? name) ast-name)
+                         (ast-all-sections))))
+    (if (zero? (length matches))
+        #f
+        (car matches))))
+
+(define (ast-collect-all-statements statement-cons)
+  (let ((ast-car (cdar  statement-cons))
+        (ast-cdr (cdadr statement-cons)))
+    (cons
+     (when (ast-has-field? ast-car :arm:statement)
+           (ast-field ast-car :arm:statement))
+     (when (ast-has-field? ast-cdr :arm:statements)
+           (ast-collect-all-statements
+            (ast-children (ast-field ast-cdr :arm:statements)))))))
+
+(define (-ast-all-statements pair)
+  (if (pair? pair)
+      (cons (cdar pair)
+            (-ast-all-statements (ast-children (cdadr pair))))
+      '()))
+
+(define (ast-all-statements ast)
+  (unless (ast-has-field? ast :arm:statements)
+          (error "AST has no statements"))
+  (-ast-all-statements (ast-children (ast-field ast :arm:statements))))
+
+(define (parsable-print-arm-statement ast . optional-args)
+  (let ((base (if (number? (car optional-args))
+                  (car optional-args)
+                  0)))
+    (when (ast-has-field? ast :arm:instruction)
+          (format #t "~a\t~a~%"
+                  (- (ast-field ast :arm:address) base)
+                  (ast-label (ast-field ast :arm:instruction))))))
+
+(define (parsable-print-section section)
+  (for-each (rcurry parsable-print-arm-statement
+                    (ast-field section :arm:base))
+            (ast-all-statements section)))
+
+;;; Process arguments
+(let ((args (member "--" *argv*)))
+  (if (and args (> (length args) 1))
+      (let ((section (ast-named-section (nth 1 args))))
+        (if section
+            (parsable-print-section section)
+            (error "section '~a' not found~%" (nth 1 args))))
+      (format #t "Usage: csurf [OPTIONS] -l [path-to/sections.stk] -- name~%")))
+(quit)
+
+;;; Local Variables:
+;;; scheme-program-name: "csurf -nogui stuff/tinylogin-prj/fix-3974.exe.prj"
+;;; End:
