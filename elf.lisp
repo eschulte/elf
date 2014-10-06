@@ -1072,7 +1072,8 @@ section (in the file)."
   (dolist (b (coerce data 'list)) (write-byte b out)))
 
 (defun copy-elf (elf)
-  (unless (eql 'elf (class-name (class-of elf)))
+  (unless (member (class-name (class-of elf))
+                  '(elf objdump csurf))
     (error "~&`copy-elf' called on non-elf object: ~a" elf))
   (let ((e (make-instance 'elf)))
     (with-slots (header section-table program-table sections ordering) e
