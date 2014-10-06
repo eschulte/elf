@@ -13,15 +13,15 @@
 ;;
 ;; Example Usage
 ;; =============
-;; 
-;; load the elf library 
+;;
+;; load the elf library
 ;; ---------------------
 ;; First load the up the `elf` library.
 ;;
 ;;     (require :elf)
 ;;     (in-package :elf)
 ;;
-;; create a simple elf binary and confirm it is an elf file 
+;; create a simple elf binary and confirm it is an elf file
 ;; ---------------------------------------------------------
 ;; For the remainder of this example, we'll use a simple elf binary
 ;; executable named =hello=, compiled from the following C code.
@@ -38,7 +38,7 @@
 ;;
 ;;     (elf::show-it (elf-header "hello") :out nil)
 ;;
-;; read an elf object, and view it's header information 
+;; read an elf object, and view it's header information
 ;; ----------------------------------------------------
 ;; Then we read the binary file into an elf object.
 ;;
@@ -49,7 +49,7 @@
 ;;
 ;;     (elf::show-it (header *elf*) :out nil)
 ;;
-;; view section-table and program-table information 
+;; view section-table and program-table information
 ;; -------------------------------------------------
 ;; We can list the names of the sections of the elf file.
 ;;
@@ -73,21 +73,21 @@
 ;;
 ;;     ;; view the contents of elf, as they exist in the file
 ;;     (show-file-layout *elf*)
-;;     START    OFFSET   CONTENTS           END     
-;;     0        NONE     HEADER             64      
-;;     64       NONE     PROGRAM-TABLE      512     
-;;     512      512      .interp            540     
-;;     540      540      .note.ABI-tag      572     
-;;     572      572      .note.gnu.build-id 608     
-;;     608      608      .gnu.hash          636     
-;;     636      NONE     FILLER             640     
-;;     640      640      .dynsym            736     
-;;     736      736      .dynstr            797     
+;;     START    OFFSET   CONTENTS           END
+;;     0        NONE     HEADER             64
+;;     64       NONE     PROGRAM-TABLE      512
+;;     512      512      .interp            540
+;;     540      540      .note.ABI-tag      572
+;;     572      572      .note.gnu.build-id 608
+;;     608      608      .gnu.hash          636
+;;     636      NONE     FILLER             640
+;;     640      640      .dynsym            736
+;;     736      736      .dynstr            797
 ;;     ...
 ;;
 ;;     ;; view the contents of elf, as they exist in the file
 ;;     (show-memory-layout *elf*)
-;;     addr     contents          end     
+;;     addr     contents          end
 ;;     -------------------------------------
 ;;     0x400000 LOAD               0x4006CC
 ;;     0x400040 PHDR               0x400200
@@ -97,7 +97,7 @@
 ;;     0x40021C .note.ABI-tag      0x40023C
 ;;     ...
 ;;
-;; write an elf object to disk 
+;; write an elf object to disk
 ;; ----------------------------
 ;; We can write out the elf file to disk.
 ;;
@@ -110,7 +110,7 @@
 ;;
 ;;     diff hello hello2
 ;;
-;; manipulate the contents of an elf object 
+;; manipulate the contents of an elf object
 ;; -----------------------------------------
 ;; We can manipulate these elf objects, and then write the results
 ;; back out to disk.  For example we can change the code in the
@@ -486,7 +486,7 @@
    (entsize   xword)))
 
 ;; Program Header flag permissions
-;; 
+;;
 (defvar pf-x        #x1        "Program header flag execute bit.")
 (defvar pf-w        #x2        "Program header flag write bit.")
 (defvar pf-r        #x3        "Program header flag read bit.")
