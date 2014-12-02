@@ -1356,8 +1356,14 @@ Note: the output should resemble the output of readelf -r."
        (list
         (parse-integer (trim address-str) :radix 16 :junk-allowed t)
         ;; bytes
-        (mapcar (lambda (num) (parse-integer num :radix 16))
-                (split-sequence #\Space (trim bytes-str)))
+        (let ((raw-bytes (mapcar (lambda (num) (parse-integer num :radix 16))
+                                 (split-sequence #\Space (trim bytes-str)))))
+          ;; If only 1 byte is returned,
+          (if (> (length raw-bytes) 1)
+              raw-bytes
+              ;; then split it into four bytes.
+              (mappend (lambda (raw) (coerce (int-to-bytes raw 4) 'list))
+                       raw-bytes)))
         ;; disassembled assembly text
         (format nil "~{~a~^ ~}" disasm-str))))
    (remove-if (lambda (line)
