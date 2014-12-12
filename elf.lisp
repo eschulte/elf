@@ -1106,7 +1106,7 @@ section (in the file)."
 
 (defgeneric (setf data) (new section)
   (:documentation
-"Update the contents of section to new, and update all headers appropriately."))
+   "Update the contents of section to new, and update all headers appropriately."))
 (defmethod (setf data) (new (sec section))
   ;; step through the ordered sections, updating where required
   (with-slots (elf sh name data) sec
@@ -1262,7 +1262,7 @@ Note: the output should resemble the output of readelf -r."
   "Show all symbols in ELF in a manner similar to readelf."
   (flet ((string-at (data offset)
            (coerce (loop for ch in (subseq data offset)
-                        until (= (char-code ch) 0)
+                      until (= (char-code ch) 0)
                       collect ch)
                    'string)))
     (let ((dynsym (named-section elf ".dynsym"))
@@ -1305,27 +1305,98 @@ Note: the output should resemble the output of readelf -r."
     (format t "~:{~&~8a ~18a ~8a~}~%" (cons (list 'offset 'contents 'end)
                                             layout))))
 
+(defun memory-sorted-sections (elf)
+  "Return the sections of the ELF file sorted by their order in memory.
+Each element of the resulting list is a triplet of (offset size header)."
+  (with-slots (sections section-table program-table) elf
+    (stable-sort
+     (remove-if
+      (lambda (trio) (zerop (first trio)))
+      (append
+       (mapcar (lambda (head)
+                 (list (vaddr head) (memsz head) head))
+               program-table)
+       (when section-table
+         (mapcar (lambda (sec) (list (address (sh sec)) (size sec) sec))
+                 sections))))
+     #'< :key #'car)))
+
 (defun show-memory-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
   (format t "~&addr     contents          end     ~%")
   (format t "-------------------------------------~%")
-  (with-slots (sections section-table program-table) elf
-    (mapc
-     (lambda (trio)
-       (bind (((beg size name) trio))
-         (format t "~&0x~x ~18a 0x~x~%" beg name (+ beg size))))
-     (stable-sort
-      (remove-if
-       (lambda (trio) (zerop (first trio)))
-       (append
-        (mapcar (lambda (head)
-                  (list (vaddr head) (memsz head) (type head)))
-                program-table)
-        (when section-table
-          (mapcar (lambda (sec) (list (address (sh sec)) (size sec) (name sec)))
-                  sections))))
-      #'< :key #'car)))
+  (mapc
+   (lambda (trio)
+     (bind (((beg size header) trio))
+       (format t "~&0x~x ~18a 0x~x~%"
+               beg
+               (cond
+                 ((subtypep (type-of header) (program-header-type))
+                  (type header))
+                 ((subtypep (type-of header) 'section)
+                  (name header)))
+               (+ beg size))))
+   (memory-sorted-sections elf))
   nil)
+
+
+;;; Modification functions
+(defmethod index-of-ea ((obj section) ea)
+  (- ea (address (sh obj))))
+
+(defun sections-holding-ea (elf ea-start &optional ea-end)
+  (remove-if-not
+   (lambda (sec)
+     (let* ((beg (address (sh sec)))
+            (end (+ beg (size sec))))
+       (and (> ea-start beg)
+            (< ea-start end)
+            (or (not ea-end) (< ea-end end)))))
+   (sections elf)))
+
+(defun section-holding-ea (obj ea-start &optional ea-end)
+  (let ((sections (sections-holding-ea obj ea-start ea-end)))
+    (assert sections (obj ea-start ea-end)
+            "No section in ~a found to contain [~a,~a]" obj ea-start ea-end)
+    (assert (= 1 (length sections)) (obj ea-start ea-end)
+            "Region [~a,~a] spand multiple sections in ~a" obj ea-start ea-end)
+    (first sections)))
+
+(defmethod subseq-ea ((obj elf) ea-start &optional ea-end)
+  (subseq-ea (section-holding-ea obj ea-start ea-end) ea-start ea-end))
+
+(defmethod (setf subseq-ea) (new (obj elf) ea-start &optional ea-end)
+  (setf (subseq-ea (section-holding-ea obj ea-start) ea-start ea-end) new))
+
+(defmethod subseq-ea ((obj section) ea-start &optional ea-end)
+  (let ((base (address (sh obj))))
+    (subseq (data obj) (- ea-start base) (when ea-end (- ea-end base)))))
+
+(defmethod (setf subseq-ea) (new (obj section) ea-start &optional ea-end)
+  (let ((base (address (sh obj))))
+    (setf (subseq (data obj) (- ea-start base) (when ea-end (- ea-end base)))
+          new)))
+
+(defmethod word-at-ea ((obj section) ea)
+  (subseq-ea obj ea (+ 4 ea)))
+
+(defmethod word-at-ea ((obj elf) ea)
+  (subseq-ea (section-holding-ea obj ea) ea (+ 4 ea)))
+
+(defmethod (setf word-at-ea) (new (obj section) ea)
+  (setf (subseq-ea obj ea (+ 4 ea)) new))
+
+(defmethod (setf word-at-ea) (new (obj elf) ea)
+  (setf (subseq-ea (section-holding-ea obj ea) ea (+ 4 ea)) new))
+
+(defgeneric insert (obj data ea)
+  (:documentation "Write DATA into OBJ at EA overwriting previous contents."))
+
+(defmethod insert ((obj section) data ea)
+  (setf (subseq-ea obj ea (+ ea (length data))) data))
+
+(defmethod insert ((obj elf) data ea)
+  (setf (subseq-ea obj ea (+ ea (length data))) data))
 
 
 ;;; Disassembly functions

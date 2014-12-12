@@ -23,6 +23,13 @@
    :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
+   ;; Modification functions
+   :index-of-ea
+   :sections-holding-ea
+   :section-holding-ea
+   :subseq-ea
+   :word-at-ea
+   :insert
    ;; disassembly functionality
    :disassemblable :objdump :csurf :project :disassemble-section
    :objdump-cmd :objdump :parse-addresses :objdump-parse
