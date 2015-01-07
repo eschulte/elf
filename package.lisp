@@ -20,7 +20,6 @@
    :*calculate-edits* :*endian* :*class*
    ;; functions
    :bytes-to-int :int-to-bytes
-   :bits-to-byte :byte-to-bits
    :bits-to-int  :int-to-bits
    :named-section :elf-p :elf-header
    :read-elf :write-elf
