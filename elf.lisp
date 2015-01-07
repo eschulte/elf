@@ -1398,6 +1398,56 @@ Each element of the resulting list is a triplet of (offset size header)."
 (defmethod insert ((obj elf) data ea)
   (setf (subseq-ea obj ea (+ ea (length data))) data))
 
+;; Switching from memory reference to file reference
+(defun sections-holding-off (elf off-start &optional off-end)
+  "Return the section holding the requested file locations.
+Note, this does not return filler if the requested file location is
+just filler bytes."
+  (mapcar (lambda-bind ((beg size value)) (nth value (sections elf)))
+          (remove-if-not
+           (lambda-bind ((beg size value))
+             (let ((end (+ beg size)))
+               (and (numberp value)
+                    (>= off-start beg)
+                    (<= off-start end)
+                    (or (not off-end) (< off-end end)))))
+           (ordering elf))))
+
+(defun section-holding-off (obj off-start &optional off-end)
+  (let ((sections (sections-holding-off obj off-start off-end)))
+    (assert sections (obj off-start off-end)
+            "No section in ~a found to contain [~a,~a]" obj off-start off-end)
+    ;; When multiple sections holds this value, return the last (this
+    ;; is the one which will overwrite the others when saving).
+    (lastcar sections)))
+
+(defmethod subseq-off ((obj elf) off-start &optional off-end)
+  (subseq-off (section-holding-off obj off-start off-end) off-start off-end))
+
+(defmethod (setf subseq-off) (new (obj elf) off-start &optional off-end)
+  (setf (subseq-off (section-holding-off obj off-start) off-start off-end) new))
+
+(defmethod subseq-off ((obj section) off-start &optional off-end)
+  (let ((base (offset (sh obj))))
+    (subseq (data obj) (- off-start base) (when off-end (- off-end base)))))
+
+(defmethod (setf subseq-off) (new (obj section) off-start &optional off-end)
+  (let ((base (offset (sh obj))))
+    (setf (subseq (data obj) (- off-start base) (when off-end (- off-end base)))
+          new)))
+
+(defmethod word-at-off ((obj section) off)
+  (subseq-off obj off (+ 4 off)))
+
+(defmethod word-at-off ((obj elf) off)
+  (subseq-off (section-holding-off obj off) off (+ 4 off)))
+
+(defmethod (setf word-at-off) (new (obj section) off)
+  (setf (subseq-off obj off (+ 4 off)) new))
+
+(defmethod (setf word-at-off) (new (obj elf) off)
+  (setf (subseq-off (section-holding-off obj off) off (+ 4 off)) new))
+
 
 ;;; Disassembly functions
 (defclass disassemblable (elf) ())

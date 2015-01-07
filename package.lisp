@@ -30,6 +30,11 @@
    :subseq-ea
    :word-at-ea
    :insert
+   :index-of-off
+   :sections-holding-off
+   :section-holding-off
+   :subseq-off
+   :word-at-off
    ;; disassembly functionality
    :disassemblable :objdump :csurf :project :disassemble-section
    :objdump-cmd :objdump :parse-addresses :objdump-parse
