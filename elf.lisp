@@ -230,6 +230,23 @@
           (if (eq *endian* :little) (reverse steps) steps))
     buf))
 
+(defun byte-to-bits (byte &aux (steps '(0 1 2 3 4 5 6 7)))
+  (map 'vector (lambda (pos) (ldb (byte 1 pos) byte))
+       (if (eq *endian* :little) (reverse steps) steps)))
+
+(defun bits-to-byte (bits &aux (steps '(0 1 2 3 4 5 6 7)) (byte 0))
+  (mapc (lambda (bit b) (setf (ldb (byte 1 bit) byte) b))
+        (if (eq *endian* :little) (reverse steps) steps)
+        (coerce bits 'list))
+  byte)
+
+(defun int-to-bits (int size)
+  (apply #'concatenate 'vector
+         (map 'list #'byte-to-bits (int-to-bytes int size))))
+
+(defun bits-to-int (bits &aux (int 0))
+  (bytes-to-int (map 'vector #'bits-to-byte (chunks bits 8))))
+
 (defun bytes-from (in bytes &optional signed-p)
   (let ((buf (make-array bytes :element-type '(unsigned-byte 8))))
     (read-sequence buf in)

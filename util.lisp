@@ -14,6 +14,11 @@
   (loop for el in sequence as n from 0
      collect (list n el)))
 
+(defun chunks (list size)
+  "Return subsequent chunks of LIST of size SIZE."
+  (loop :for i :below (1+ (- (length list) size)) :by size :collect
+     (subseq list i (+ i size))))
+
 #+sbcl
 (locally (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
   (sb-alien:define-alien-routine (#-win32 "tempnam" #+win32 "_tempnam" tempnam)
