@@ -57,4 +57,7 @@
    :arm-instruction
    :ldr/str
    :ldm/stm
+   :bx
+   :b/bl
+   :set-arm-branch
    ))

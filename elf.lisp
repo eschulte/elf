@@ -1436,6 +1436,15 @@ Each element of the resulting list is a triplet of (offset size header)."
   (int-to-bits (bytes-to-int
                 (subseq-ea (section-holding-ea obj ea) ea (+ 4 ea))) (* 4 8)))
 
+(defmethod (setf bits-at-ea) (new (obj section) ea)
+  (let ((bytes (int-to-bytes (bits-to-int new) (/ (length new) 8))))
+    (setf (subseq-ea obj ea (+ (length bytes) ea)) bytes)))
+
+(defmethod (setf bits-at-ea) (new (obj elf) ea)
+  (let ((bytes (int-to-bytes (bits-to-int new) (/ (length new) 8))))
+    (setf (subseq-ea (section-holding-ea obj ea)
+                     ea (+ (length bytes) ea)) bytes)))
+
 ;; Switching from memory reference to file reference
 (defun sections-holding-off (elf off-start &optional off-end)
   "Return the section holding the requested file locations.

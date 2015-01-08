@@ -2,8 +2,15 @@
 
 ;;; Commentary.
 ;;
-;; This is implemented largely from the ARM7-TDMI-manual-pt2.pdf and
-;; page numbers refer to said.
+;; This file provides methods for reading/writing ARM instructions
+;; from/to streams of bits.  It is implemented largely from the
+;; ARM7-TDMI-manual-pt2.pdf and page numbers in comments below refer
+;; to said.
+;; 
+;; TODO:
+;; - nice print methods so that these instructions are easily readable
+;;   at the REPL
+;; - instruction disambiguation (see `arm-decode' below)
 
 ;;; Code.
 (in-package :elf)
@@ -162,83 +169,19 @@
 
 
 ;;; Convenience methods
-(defmethod arm-jump ((obj elf::elf) mnemonic to from)
-  (make-instance 'b/bl
-    :conditions (ecase mnemonic
-                  ((:bl :b) :al)
-                  (:bne     :ne)
-                  (:beq     :eq))
-    :l          (ecase mnemonic
-                  (:bl            :branch-w-link)
-                  ((:b :bne :beq) :branch))
-    :offset (- (- from 8) to))
-  ;; (setf (word-at-ea obj from)
-  ;;       (concatenate 'vector operand op-code))
-  ;; obj
-  )
-
-(defmethod arm-bl ((obj elf::elf) to from)
-  (arm-jump obj :bl to from))
-
-(defmethod arm-b ((obj elf::elf) to from)
-  (arm-jump obj :b to from))
-
-(defmethod arm-bne ((obj elf::elf) to from)
-  (arm-jump obj :bne to from))
-
-(defmethod arm-beq ((obj elf::elf) to from)
-  (arm-jump obj :beq to from))
-
-(defun arm-disasm (bits)
-  (flet ((bseq (from to)
-           (if (eq *endian* :little)
-               (subseq bits from to)
-               (subseq bits (- 32 from) (- 32 to)))))
-    (assert (equalp (bseq 26 28) (if (eq *endian* :little) #*10 #*01))
-            (bits)
-            "does not look like a valid LDR/SDR instruction ~a"
-            (bseq 26 28))
-    `((:condition  . ,(bseq 28 32))
-      (:immediate  . ,(bseq 25 26))
-      (:pre/post   . ,(bseq 24 25))
-      (:up/down    . ,(bseq 23 24))
-      (:byte/word  . ,(bseq 22 23))
-      (:write-back . ,(bseq 21 22))
-      (:load/store . ,(bseq 20 21))
-      (:base-reg   . ,(bseq 16 20))
-      (:dest-reg   . ,(bseq 12 16))
-      (:offset     . ,(bseq 0  12)))))
-
-(defun arm-dosasm (disasm)
-  (let ((bits (list
-               (cdr (assoc :condition  disasm))
-               (if (eql *endian* :little) #*10 #*01)
-               (cdr (assoc :immediate  disasm))
-               (cdr (assoc :pre/post   disasm))
-               (cdr (assoc :up/down    disasm))
-               (cdr (assoc :byte/word  disasm))
-               (cdr (assoc :write-back disasm))
-               (cdr (assoc :load/store disasm))
-               (cdr (assoc :base-reg   disasm))
-               (cdr (assoc :dest-reg   disasm))
-               (cdr (assoc :offset     disasm)))))
-    (apply #'concatenate '(vector (unsigned-byte 1))
-           (if (eq *endian* :little) (reverse bits) bits))))
-
-(defmethod arm-ldr ((obj elf::elf) place register from)
-  "Edit ldr instruction at PLACE to load FROM into REGISTER"
-  (setf (word-at-ea obj place)
-        (int-to-bytes
-         (bits-to-int
-          (arm-dosasm
-           `((:condition  . #*0111)
-             (:immediate  . #*0)
-             (:pre/post   . #*1)
-             (:up/down    . ,(if (> from place) #*1 #*0))
-             (:byte/word  . #*0)
-             (:write-back . #*0)
-             (:load/store . #*1)
-             (:base-reg   . ,(int-to-bits 15 4)) ; PC base register
-             (:dest-reg   . ,(int-to-bits register 4))
-             (:offset     . ,(int-to-bits (abs (- (- from place) 8)) 12))))) 4))
+(defmethod set-arm-branch ((obj elf) mnemonic to from)
+  (setf (bits-at-ea obj from)
+        (to-bits (make-instance 'b/bl
+                   :conditions (ecase mnemonic
+                                 ((:bl :b) :al)
+                                 (:bne     :ne)
+                                 (:beq     :eq))
+                   :l          (ecase mnemonic
+                                 (:bl            :branch-w-link)
+                                 ((:b :bne :beq) :branch))
+                   :offset (- (- from 8) to))))
   obj)
+
+(defmethod arm-decode ((obj elf) type ea)
+  ;; TODO: shouldn't need a type argument.
+  (from-bits (make-instance type) (bits-at-ea obj ea)))
