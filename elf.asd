@@ -14,7 +14,8 @@
                flexi-streams)
   :components ((:file "package")
                (:file "util" :depends-on ("package"))
-               (:file "elf" :depends-on ("package" "util"))))
+               (:file "elf" :depends-on ("package" "util"))
+               (:file "arm" :depends-on ("package" "util" "elf"))))
 (defsystem :elf-test
   :description "Test the elf library."
   :version "0.0.0"

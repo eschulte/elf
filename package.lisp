@@ -53,4 +53,8 @@
    :elf :sh :ph :name :data
    ;; elf class
    :header :section-table :program-table :sections :ordering
+   ;; ARM
+   :arm-instruction
+   :ldr/str
+   :ldm/stm
    ))

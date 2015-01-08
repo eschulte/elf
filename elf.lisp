@@ -207,19 +207,22 @@
                               val
                               (car (rassoc val ',dictionary))) ,signed)))))
 
-(defmacro define-bit-dictionary
-    (name num dictionary &key (signed nil) (class-dependent nil))
+(defmacro define-bit-dictionary (name num dictionary)
   `(define-binary-type ,name ()
      (:reader (in)
-              (let ((byte (bytes-from in num ,signed :byte-size 1)))
-                (or (cdr (assoc byte ',dictionary)) byte)))
+              (let ((value
+                     (bits-to-int
+                      (let ((buf (make-array ,num
+                                             :element-type '(unsigned-byte 1))))
+                        (read-sequence buf in)
+                        buf))))
+                (or (cdr (assoc value ',dictionary)) value)))
      (:writer (out val)
-              (bytes-to out num 
-                        (if (numberp val)
-                            val
-                            (car (rassoc val ',dictionary)))
-                        ,signed
-                        :byte-size 1))))
+              (write-sequence
+               (int-to-bits (if (numberp val)
+                                val
+                                (car (rassoc val ',dictionary))) ,num)
+               out))))
 
 ;; integers and bytes
 (defvar *endian* :little
@@ -231,7 +234,7 @@
 (define-condition bad-elf-class (error)
   ((class :initarg :class :reader class)))
 
-(defun bytes-to-int (bytes &optional signed-p &key (byte-size 8) &aux steps)
+(defun bytes-to-int (bytes &optional signed-p (byte-size 8) &aux steps)
   (dotimes (n (length bytes)) (setf steps (cons (* n byte-size) steps)))
   (unless (listp bytes) (setf bytes (coerce bytes 'list)))
   (let ((value 0))
@@ -241,7 +244,7 @@
         (- (expt 2 (1- (* byte-size (length bytes)))) value)
         value)))
 
-(defun int-to-bytes (int size &optional signed-p &key (byte-size 8) &aux steps)
+(defun int-to-bytes (int size &optional signed-p (byte-size 8) &aux steps)
   (dotimes (n size) (setf steps (cons (* n byte-size) steps)))
   (let ((buf (make-array size
                          :element-type `(unsigned-byte ,byte-size)
@@ -253,10 +256,10 @@
     buf))
 
 (defun bits-to-int (bits &optional signed-p)
-  (bytes-to-int bits signed-p :byte-size 1))
+  (bytes-to-int bits signed-p 1))
 
 (defun int-to-bits (byte size &optional signed-p)
-  (int-to-bytes byte size signed-p :byte-size 1))
+  (int-to-bytes byte size signed-p 1))
 
 (defun bytes-from (in bytes &optional signed-p (byte-size 8))
   (let ((buf (make-array bytes :element-type `(unsigned-byte ,byte-size))))
@@ -264,11 +267,11 @@
     (bytes-to-int (coerce buf 'list) signed-p)))
 
 (defun bytes-to (out bytes value &optional signed-p (byte-size 8))
-  (write-sequence (int-to-bytes value bytes signed-p :byte-size byte-size) out))
+  (write-sequence (int-to-bytes value bytes signed-p byte-size) out))
 
-(define-binary-type unsigned-integer (bytes)
-  (:reader (in) (bytes-from in bytes))
-  (:writer (out value) (bytes-to out bytes value)))
+(define-binary-type unsigned-integer (bytes byte-size)
+  (:reader (in) (bytes-from in bytes nil byte-size))
+  (:writer (out value) (bytes-to out bytes value nil byte-size)))
 
 (define-binary-type signed-integer (bytes)
   (:reader (in) (bytes-from in bytes 'signed))
@@ -1438,7 +1441,9 @@ Each element of the resulting list is a triplet of (offset size header)."
   "Return the section holding the requested file locations.
 Note, this does not return filler if the requested file location is
 just filler bytes."
-  (mapcar (lambda-bind ((beg size value)) (nth value (sections elf)))
+  (mapcar (lambda-bind ((beg size value))
+            (declare (ignorable beg size))
+            (nth value (sections elf)))
           (remove-if-not
            (lambda-bind ((beg size value))
              (let ((end (+ beg size)))
