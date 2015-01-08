@@ -61,4 +61,5 @@
    :b/bl
    :set-arm-branch
    :set-arm-data-transfer
+   :set-arm-stack
    ))

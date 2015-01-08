@@ -198,6 +198,22 @@
                    :offset (- from place 8))))
   obj)
 
+(defmethod set-arm-stack ((obj elf) mnemonic place registers)
+  (setf (bits-at-ea obj place)
+        (to-bits (make-instance 'ldm/stm
+                   :conditions :al
+                   :p :pre
+                   :u :down
+                   :s :no-psr
+                   :w :write-back
+                   :l (ecase mnemonic (:push :store) (:pop :load))
+                   :rn 13
+                   :registers (let ((bits (make-array 16 :element-type 'bit
+                                                      :initial-element 0)))
+                                (dolist (reg registers) (setf (bit bits reg) 1))
+                                bits))))
+  obj)
+
 (defmethod arm-decode ((obj elf) type ea)
   ;; TODO: shouldn't need a type argument.
   (from-bits (make-instance type) (bits-at-ea obj ea)))
