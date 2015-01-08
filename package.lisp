@@ -60,4 +60,5 @@
    :bx
    :b/bl
    :set-arm-branch
+   :set-arm-data-transfer
    ))

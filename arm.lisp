@@ -182,6 +182,22 @@
                    :offset (- (- from 8) to))))
   obj)
 
+(defmethod set-arm-data-transfer ((obj elf) mnemonic place reg from)
+  (setf (bits-at-ea obj from)
+        (to-bits (make-instance 'ldr/str
+                   :conditions :al
+                   :i :immediate
+                   :l (ecase mnemonic (:ldr :load) (:str :store))
+                   :w :no-write-back
+                   :b :word
+                   :u (if (>= from (+ place 8)) :up :down)
+                   :p :pre
+                   :i :immediate
+                   :rn 15               ; <- PC
+                   :rd reg
+                   :offset (- from place 8))))
+  obj)
+
 (defmethod arm-decode ((obj elf) type ea)
   ;; TODO: shouldn't need a type argument.
   (from-bits (make-instance type) (bits-at-ea obj ea)))
