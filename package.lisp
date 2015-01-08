@@ -31,6 +31,7 @@
    :section-holding-ea
    :subseq-ea
    :word-at-ea
+   :bits-at-ea
    :insert
    :index-of-off
    :sections-holding-off

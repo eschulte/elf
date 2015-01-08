@@ -180,6 +180,14 @@
   (:writer (out buf)
            (write-sequence buf out)))
 
+(define-binary-type raw-bits (length)
+  (:reader (in)
+           (let ((buf (make-array length :element-type '(unsigned-byte 1))))
+             (read-sequence buf in)
+             buf))
+  (:writer (out buf)
+           (write-sequence buf out)))
+
 ;; dictionaries
 (defmacro define-elf-dictionary
     (name num dictionary &key (signed nil) (class-dependent nil))
@@ -198,6 +206,20 @@
                           (if (numberp val)
                               val
                               (car (rassoc val ',dictionary))) ,signed)))))
+
+(defmacro define-bit-dictionary
+    (name num dictionary &key (signed nil) (class-dependent nil))
+  `(define-binary-type ,name ()
+     (:reader (in)
+              (let ((byte (bytes-from in num ,signed :byte-size 1)))
+                (or (cdr (assoc byte ',dictionary)) byte)))
+     (:writer (out val)
+              (bytes-to out num 
+                        (if (numberp val)
+                            val
+                            (car (rassoc val ',dictionary)))
+                        ,signed
+                        :byte-size 1))))
 
 ;; integers and bytes
 (defvar *endian* :little
@@ -1403,6 +1425,13 @@ Each element of the resulting list is a triplet of (offset size header)."
 
 (defmethod insert ((obj elf) data ea)
   (setf (subseq-ea obj ea (+ ea (length data))) data))
+
+(defmethod bits-at-ea ((obj section) ea)
+  (int-to-bits (bytes-to-int (subseq-ea obj ea (+ 4 ea))) (* 4 8)))
+
+(defmethod bits-at-ea ((obj elf) ea)
+  (int-to-bits (bytes-to-int
+                (subseq-ea (section-holding-ea obj ea) ea (+ 4 ea))) (* 4 8)))
 
 ;; Switching from memory reference to file reference
 (defun sections-holding-off (elf off-start &optional off-end)
