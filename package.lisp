@@ -62,4 +62,5 @@
    :set-arm-branch
    :set-arm-data-transfer
    :set-arm-stack
+   :to-bits :from-bits
    ))
