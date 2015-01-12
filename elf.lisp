@@ -270,8 +270,8 @@
   (write-sequence (int-to-bytes value bytes signed-p byte-size) out))
 
 (define-binary-type unsigned-integer (bytes byte-size)
-  (:reader (in) (bytes-from in bytes nil byte-size))
-  (:writer (out value) (bytes-to out bytes value nil byte-size)))
+  (:reader (in) (bytes-from in bytes nil (or byte-size 8)))
+  (:writer (out value) (bytes-to out bytes value nil (or byte-size 8))))
 
 (define-binary-type signed-integer (bytes)
   (:reader (in) (bytes-from in bytes 'signed))
