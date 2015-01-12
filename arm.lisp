@@ -202,8 +202,8 @@
   (setf (bits-at-ea obj place)
         (to-bits (make-instance 'ldm/stm
                    :conditions :al
-                   :p :pre
-                   :u :down
+                   :p (ecase mnemonic (:push :pre) (:pop :post))
+                   :u (ecase mnemonic (:push :down) (:pop :up))
                    :s :no-psr
                    :w :write-back
                    :l (ecase mnemonic (:push :store) (:pop :load))
