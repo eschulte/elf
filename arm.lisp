@@ -15,15 +15,16 @@
 ;;; Code.
 (in-package :elf)
 
-(defclass arm-instruction () ())
+(defclass arm-data () ())
+(defclass arm-instruction (arm-data) ())
 
 (defmethod initialize-instance :after ((obj arm-instruction) &key)
   (setf (ignored obj) nil))
 
-(defmethod from-bits ((obj arm-instruction) bits)
+(defmethod from-bits ((obj arm-data) bits)
   (setf obj (read-value (type-of obj) (make-in-memory-input-stream bits))))
 
-(defmethod to-bits ((obj arm-instruction))
+(defmethod to-bits ((obj arm-data))
   (with-output-to-sequence (out :element-type '(unsigned-byte 1))
     (write-value (type-of obj) out obj)))
 
@@ -49,7 +50,7 @@
    (15 . :err)))                        ; never used
 
 (define-bit-dictionary immediate 1
-  ((0 . :immediate) (1 . :register)))
+  ((0 . :register) (1 . :immediate)))
 
 (define-bit-dictionary pre/post 1
   ((0 . :post) (1 . :pre)))
@@ -71,6 +72,27 @@
 
 (define-bit-dictionary link-bit 1
   ((0 . :branch) (1 . :branch-w-link)))
+
+(define-bit-dictionary set-condition-codes 1
+  ((0 . :no-set) (1 . :set)))
+
+(define-bit-dictionary opcodes 4
+  ((0  . :AND)
+   (2  . :SUB)
+   (3  . :RSB)
+   (4  . :ADD)
+   (5  . :ADC)
+   (6  . :SBC)
+   (7  . :RSC)
+   (8  . :TST)
+   (9  . :TEQ)
+   (10 . :CMP)
+   (11 . :CMN)
+   (12 . :ORR)
+   (13 . :MOV)
+   (14 . :BIC)
+   (15 . :MVN)
+   (1  . :EOR)))
 
 (define-binary-type register ()
   (:reader (in)
@@ -96,7 +118,7 @@
              buf))
   (:writer (out ignore) (declare (ignore ignore)) (write-sequence value out)))
 
-(define-binary-type offset (length)
+(define-binary-type numerical-value (length)
   (:reader (in)
            (bits-to-int
             (let ((buf (make-array length :element-type '(unsigned-byte 1))))
@@ -110,7 +132,7 @@
   ;; LDR/STR opcodes p. 28
   ;; 31       28                             19      15      11          0
   ;; [ Cond 4 ] [01] [I] [P] [U] [B] [W] [L] [ Rn 4] [ Rd 4] [ Offset 12 ]
-  ((offset    (offset :length 12))
+  ((offset    (numerical-value :length 12))
    (rd         register)
    (rn         register)
    (l          load/store)
@@ -167,6 +189,53 @@
    (ignored   (forced :value #*101))
    (conditions condition-field)))
 
+(define-binary-class data-processing (arm-instruction)
+  ((operand2  (raw-bits :length 12))
+   (rd         register)
+   (rn         register)
+   (s          set-condition-codes)
+   (opcode     opcodes)
+   (i          immediate)
+   (ignored   (forced :value #*00))
+   (conditions condition-field)))
+
+(define-binary-class register-operand (arm-data)
+  ((rm    register)
+   (shift (numerical-value :length 8))))
+
+(define-binary-class immediate-operand (arm-data)
+  ((imm    (numerical-value :length 8))
+   (rotate (numerical-value :length 4))))
+
+;;; Interpret data-processing operand2 based on value of immediate operand
+(defmethod reconcile-immediate-operand ((obj data-processing))
+  (let ((bits (operand2 obj)))
+    (format t "BITS:~S~%" bits)
+    (setf (operand2 obj)
+          (from-bits (make-instance
+                         (case (i obj)
+                           (:immediate 'immediate-operand)
+                           (:register  'register-operand)))
+                     bits)))
+  obj)
+
+(defmethod (setf i) :after (new (obj data-processing))
+  (when (slot-boundp obj 'operand2) (reconcile-immediate-operand obj)))
+
+(defmethod (setf operand2) :after (new (obj data-processing))
+  (when (and (slot-boundp obj 'i)
+             (subtypep 'SIMPLE-BIT-VECTOR (type-of (operand2 obj))))
+    (reconcile-immediate-operand obj)))
+
+(defmethod read-value :around ((type (eql 'data-processing)) stream &key)
+  (reconcile-immediate-operand (call-next-method)))
+
+(defmethod write-value :around ((type (eql 'data-processing)) stream value &key)
+  (let ((temp (operand2 value)))
+    (setf (operand2 value) (to-bits (operand2 value)))
+    (call-next-method)
+    (setf (operand2 value) temp)))
+
 
 ;;; Convenience methods
 (defmethod set-arm-branch ((obj elf) mnemonic to from)
@@ -179,11 +248,11 @@
                    :l          (ecase mnemonic
                                  (:bl            :branch-w-link)
                                  ((:b :bne :beq) :branch))
-                   :offset (- (- from 8) to))))
+                   :offset (- to from 8))))
   obj)
 
 (defmethod set-arm-data-transfer ((obj elf) mnemonic place reg from)
-  (setf (bits-at-ea obj from)
+  (setf (bits-at-ea obj place)
         (to-bits (make-instance 'ldr/str
                    :conditions :al
                    :i :immediate
@@ -212,6 +281,20 @@
                                                       :initial-element 0)))
                                 (dolist (reg registers) (setf (bit bits reg) 1))
                                 bits))))
+  obj)
+
+(defmethod set-arm-data-processing ((obj elf) mnemonic place register immediate)
+  (setf (bits-at-ea obj place)
+        (to-bits (make-instance 'data-processing
+                   :operand2 (to-bits (make-instance 'immediate-operand
+                                        :rotate 0
+                                        :imm immediate))
+                   :rd register
+                   :rn (ecase mnemonic (:cmp 0))
+                   :s (ecase mnemonic (:cmp :no-set))
+                   :opcode mnemonic
+                   :i :immediate
+                   :conditions :al)))
   obj)
 
 (defmethod arm-decode ((obj elf) type ea)

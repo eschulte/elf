@@ -14,7 +14,8 @@
   (:shadow
    :class
    :get
-   :type)
+   :type
+   :rotate)
   (:export
    ;; dynamic variables
    :*calculate-edits* :*endian* :*class*
@@ -59,6 +60,7 @@
    :ldm/stm
    :bx
    :b/bl
+   :data-processing
    :set-arm-branch
    :set-arm-data-transfer
    :set-arm-stack
