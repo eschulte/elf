@@ -255,16 +255,15 @@
   (setf (bits-at-ea obj place)
         (to-bits (make-instance 'ldr/str
                    :conditions :al
-                   :i :immediate
+                   :i :register
                    :l (ecase mnemonic (:ldr :load) (:str :store))
                    :w :no-write-back
                    :b :word
                    :u (if (>= from (+ place 8)) :up :down)
                    :p :pre
-                   :i :immediate
                    :rn 15               ; <- PC
                    :rd reg
-                   :offset (- from place 8))))
+                   :offset (abs (- from place 8)))))
   obj)
 
 (defmethod set-arm-stack ((obj elf) mnemonic place registers)
