@@ -55,7 +55,9 @@
    ;; elf class
    :header :section-table :program-table :sections :ordering
    ;; ARM
+   :arm-data
    :arm-instruction
+   :to-bits :from-bits
    :ldr/str
    :ldm/stm
    :bx
@@ -64,5 +66,5 @@
    :set-arm-branch
    :set-arm-data-transfer
    :set-arm-stack
-   :to-bits :from-bits
+   :set-arm-data-processing
    ))

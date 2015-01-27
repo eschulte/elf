@@ -285,13 +285,13 @@
 (defmethod set-arm-data-processing ((obj elf) mnemonic place register immediate)
   (setf (bits-at-ea obj place)
         (to-bits (make-instance 'data-processing
-                   :operand2 (to-bits (make-instance 'immediate-operand
-                                        :rotate 0
-                                        :imm immediate))
+                   :operand2 (make-instance 'immediate-operand
+                               :rotate 0
+                               :imm immediate)
                    :rd register
                    :rn (ecase mnemonic (:cmp 0))
-                   :s (ecase mnemonic (:cmp :no-set))
-                   :opcode mnemonic
+                   :s (ecase mnemonic (:cmp :set))
+                   :opcode (ecase mnemonic (:cmp :CMP))
                    :i :immediate
                    :conditions :al)))
   obj)
