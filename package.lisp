@@ -57,14 +57,20 @@
    ;; ARM
    :arm-data
    :arm-instruction
-   :to-bits :from-bits
+   :to-bits :to-bytes :from-bits :from-bytes
    :ldr/str
    :ldm/stm
    :bx
    :b/bl
    :data-processing
+   :make-arm-branch
    :set-arm-branch
+   :make-arm-data-transfer
    :set-arm-data-transfer
+   :make-arm-stack
    :set-arm-stack
+   :make-arm-data-processing
    :set-arm-data-processing
+   :make-arm-word
+   :set-arm-word
    ))

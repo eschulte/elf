@@ -24,9 +24,19 @@
 (defmethod from-bits ((obj arm-data) bits)
   (setf obj (read-value (type-of obj) (make-in-memory-input-stream bits))))
 
+(defmethod from-bytes ((obj arm-data) bytes)
+  (from-bits obj (apply #'concatenate 'bit-vector
+                        (mapcar (lambda (byte)
+                                  (int-to-bits (bytes-to-int (list byte)) 8))
+                                bytes))))
+
 (defmethod to-bits ((obj arm-data))
   (with-output-to-sequence (out :element-type '(unsigned-byte 1))
     (write-value (type-of obj) out obj)))
+
+(defmethod to-bytes ((obj arm-data))
+  (mapcar (lambda (bits) (int-to-bytes (bits-to-int bits) 1))
+          (chunks (to-bits obj) 8)))
 
 
 ;;; Constituents
@@ -207,6 +217,9 @@
   ((imm    (numerical-value :length 8))
    (rotate (numerical-value :length 4))))
 
+(define-binary-class .word (arm-data)
+  ((imm (numerical-value :length 32))))
+
 ;;; Interpret data-processing operand2 based on value of immediate operand
 (defmethod reconcile-immediate-operand ((obj data-processing))
   (let ((bits (operand2 obj)))
@@ -238,62 +251,80 @@
 
 
 ;;; Convenience methods
+(defun make-arm-branch (mnemonic offset)
+  (make-instance 'b/bl
+    :conditions (ecase mnemonic
+                  ((:bl :b) :al)
+                  (:bne     :ne)
+                  (:beq     :eq))
+    :l          (ecase mnemonic
+                  (:bl            :branch-w-link)
+                  ((:b :bne :beq) :branch))
+    :offset offset))
+
 (defmethod set-arm-branch ((obj elf) mnemonic to from)
   (setf (bits-at-ea obj from)
-        (to-bits (make-instance 'b/bl
-                   :conditions (ecase mnemonic
-                                 ((:bl :b) :al)
-                                 (:bne     :ne)
-                                 (:beq     :eq))
-                   :l          (ecase mnemonic
-                                 (:bl            :branch-w-link)
-                                 ((:b :bne :beq) :branch))
-                   :offset (- to from 8))))
+        (to-bits (make-arm-branch mnemonic (- to from 8))))
   obj)
+
+(defun make-arm-data-transfer (mnemonic reg offset)
+  (make-instance 'ldr/str
+    :conditions :al
+    :i :register
+    :l (ecase mnemonic (:ldr :load) (:str :store))
+    :w :no-write-back
+    :b :word
+    :u (if (< offset 0) :down :up)
+    :p :pre
+    :rn 15               ; <- PC
+    :rd reg
+    :offset (abs offset)))
 
 (defmethod set-arm-data-transfer ((obj elf) mnemonic place reg from)
   (setf (bits-at-ea obj place)
-        (to-bits (make-instance 'ldr/str
-                   :conditions :al
-                   :i :register
-                   :l (ecase mnemonic (:ldr :load) (:str :store))
-                   :w :no-write-back
-                   :b :word
-                   :u (if (>= from (+ place 8)) :up :down)
-                   :p :pre
-                   :rn 15               ; <- PC
-                   :rd reg
-                   :offset (abs (- from place 8)))))
+        (to-bits (make-arm-data-transfer mnemonic reg (- from place 8))))
   obj)
 
+(defun make-arm-stack (mnemonic registers)
+  (make-instance 'ldm/stm
+    :conditions :al
+    :p (ecase mnemonic (:push :pre) (:pop :post))
+    :u (ecase mnemonic (:push :down) (:pop :up))
+    :s :no-psr
+    :w :write-back
+    :l (ecase mnemonic (:push :store) (:pop :load))
+    :rn 13
+    :registers (let ((bits (make-array 16 :element-type 'bit
+                                       :initial-element 0)))
+                 (dolist (reg registers) (setf (bit bits reg) 1))
+                 bits)))
+
 (defmethod set-arm-stack ((obj elf) mnemonic place registers)
-  (setf (bits-at-ea obj place)
-        (to-bits (make-instance 'ldm/stm
-                   :conditions :al
-                   :p (ecase mnemonic (:push :pre) (:pop :post))
-                   :u (ecase mnemonic (:push :down) (:pop :up))
-                   :s :no-psr
-                   :w :write-back
-                   :l (ecase mnemonic (:push :store) (:pop :load))
-                   :rn 13
-                   :registers (let ((bits (make-array 16 :element-type 'bit
-                                                      :initial-element 0)))
-                                (dolist (reg registers) (setf (bit bits reg) 1))
-                                bits))))
+  (setf (bits-at-ea obj place) (to-bits (make-arm-stack mnemonic registers)))
   obj)
+
+(defun make-arm-data-processing (mnemonic register immediate)
+  (make-instance 'data-processing
+    :operand2 (make-instance 'immediate-operand
+                :rotate 0
+                :imm immediate)
+    :rd register
+    :rn 0
+    :s :set
+    :opcode mnemonic
+    :i :immediate
+    :conditions :al))
 
 (defmethod set-arm-data-processing ((obj elf) mnemonic place register immediate)
   (setf (bits-at-ea obj place)
-        (to-bits (make-instance 'data-processing
-                   :operand2 (make-instance 'immediate-operand
-                               :rotate 0
-                               :imm immediate)
-                   :rd register
-                   :rn (ecase mnemonic (:cmp 0))
-                   :s (ecase mnemonic (:cmp :set))
-                   :opcode (ecase mnemonic (:cmp :CMP))
-                   :i :immediate
-                   :conditions :al)))
+        (to-bits (make-arm-data-processing mnemonic register immediate)))
+  obj)
+
+(defun make-arm-word (immediate)
+  (make-instance '.word :imm immediate))
+
+(defmethod set-arm-word ((obj elf) place immediate)
+  (setf (bits-at-ea obj place) (to-bits (make-arm-word immediate)))
   obj)
 
 (defmethod arm-decode ((obj elf) type ea)
