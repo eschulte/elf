@@ -738,6 +738,9 @@
     (:64-bit 'elf-dyn-64)
     (otherwise (error 'bad-elf-class :class *class*))))
 
+;;; TODO: implement a type for elements of the .plt table
+;;;       (similar to what's currently used to parse data for .dynsym)
+
 (defgeneric word-size (dyn)
   (:documentation "Return the word size for the given class."))
 
