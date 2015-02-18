@@ -1232,11 +1232,15 @@ section (in the file)."
   (first (remove-if (lambda (sec) (not (string= name (sym-name sec))))
                     (symbols elf))))
 
+(defvar elf-magic-numbers
+  '((#\Rubout #\E #\L #\F)
+    (#\Rubout #\C #\G #\C)))
+
 (defun elf-p (file)
   "Return t if file is an ELF file (using the magic number test)."
   (with-open-file (in file :element-type '(unsigned-byte 8))
-    (string= (concatenate 'string (string (code-char #x7f)) "ELF")
-             (read-value 'string in :length 4))))
+    (car (member (coerce (read-value 'string in :length 4) 'list)
+                 elf-magic-numbers :test #'equalp))))
 
 (defun elf-header-endianness-warn (header)
   "Raise a warning if HEADER was read using the wrong endianness."
