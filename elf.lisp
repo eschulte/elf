@@ -1524,6 +1524,9 @@ just filler bytes."
     (write-elf (elf section) path)
     (shell (format nil "~a -j ~a -d ~a" objdump-cmd (name section) path))))
 
+(defvar *single-value-objdump-hack* nil
+  "Set to non-nil if objdump prints 4-byte values as a single number.")
+
 (defun parse-addresses (lines)
   "Parse addresses from lines of objdump output."
   (mapcar
@@ -1536,7 +1539,8 @@ just filler bytes."
         (let ((raw-bytes (mapcar (lambda (num) (parse-integer num :radix 16))
                                  (split-sequence #\Space (trim bytes-str)))))
           ;; If only 1 byte is returned,
-          (if (> (length raw-bytes) 1)
+          (if (or (not *single-value-objdump-hack*)
+                  (> (length raw-bytes) 1))
               raw-bytes
               ;; then split it into four bytes.
               (mappend (lambda (raw) (coerce (int-to-bytes raw 4) 'list))

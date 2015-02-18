@@ -42,6 +42,7 @@
    ;; disassembly functionality
    :disassemblable :objdump :csurf :project :disassemble-section
    :objdump-cmd :objdump :parse-addresses :objdump-parse
+   :*single-value-objdump-hack*
    :csurf-cmd
    :csurf-script
    ;; methods
