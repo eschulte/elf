@@ -40,8 +40,8 @@ The contents are returned grouped by function."))
 (defvar *single-value-objdump-hack* nil
   "Set to non-nil if objdump prints 4-byte values as a single number.")
 
-(defun parse-addresses (lines)
-  "Parse addresses from lines of objdump output."
+(defun parse-objdump-line (lines)
+  "Parse line of objdump output into (address raw instruction)."
   (mapcar
    (lambda (line)
      (destructuring-bind (address-str bytes-str . disasm-str)
@@ -59,7 +59,8 @@ The contents are returned grouped by function."))
               (mappend (lambda (raw) (coerce (int-to-bytes raw 4) 'list))
                        raw-bytes)))
         ;; disassembled assembly text
-        (format nil "~{~a~^ ~}" disasm-str))))
+        (from-string (make-instance 'instruction)
+                     (format nil "~{~a~^ ~}" disasm-str)))))
    (remove-if (lambda (line)
                 (or (< (length line) 9)
                     (not (equal #\: (aref line 8)))))
@@ -77,7 +78,7 @@ The contents are returned grouped by function."))
                            (aref matches 1)))))))
     (mapcar #'cons
             (remove nil (mapcar sec-header lines))
-            (mapcar #'parse-addresses
+            (mapcar #'parse-objdump-line
                     (cdr (split-sequence-if sec-header lines))))))
 
 (defmethod disassemble-section ((elf objdump) section-name)

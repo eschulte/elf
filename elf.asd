@@ -16,6 +16,7 @@
                (:file "util" :depends-on ("package"))
                (:file "elf" :depends-on ("package" "util"))
                (:file "arm" :depends-on ("package" "util" "elf"))
+               (:file "instruction" :depends-on ("package"))
                (:file "disassemblable"
                       :depends-on ("package" "util" "elf" "instruction"))))
 (defsystem :elf-test
