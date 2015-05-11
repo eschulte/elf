@@ -41,6 +41,7 @@
    :word-at-off
    ;; disassembly functionality
    :disassemblable :objdump :csurf :project :disassemble-section
+   :elf-const :objdump-const
    :objdump-cmd :objdump :parse-addresses :objdump-parse
    :*single-value-objdump-hack*
    :csurf-cmd

@@ -928,6 +928,12 @@ section (in the file)."
 (defmethod read-value ((type (eql 'csurf)) in &key)
   (elf-read-value type in))
 
+(defmethod read-value ((type (eql 'elf-const)) in &key)
+  (elf-read-value type in))
+
+(defmethod read-value ((type (eql 'objdump-const)) in &key)
+  (elf-read-value type in))
+
 (defun elf-read-value (type in)
   ;; Read an elf object from a binary input stream.
   (flet ((raw-bytes (from size)
@@ -1505,15 +1511,32 @@ just filler bytes."
   (setf (subseq-off (section-holding-off obj off) off (+ 4 off)) new))
 
 
-;;; Disassembly functions
+;;; Disassembly classes and functions
 (defclass disassemblable (elf) ())
+
 (defclass objdump (disassemblable) ())
+
 (defclass csurf (disassemblable)
   ((project :initarg :project :accessor project :initform nil)))
 
+(defclass elf-const (disassemblable)
+  ((disassembly :initarg :disassembly :accessor disassembly
+                :initform (make-hash-table :test 'equal)))
+  (:documentation
+   "Disassemblable objects with caches holding disassembly by section name."))
+
+(defclass objdump-const (elf-const objdump) ()
+  (:documentation "Caching objdump-backed ELF file."))
+
 (defgeneric disassemble-section (disassemblable section)
   (:documentation
-   "Return the disassembly of the contents of SECTION in DISASM."))
+   "Return the disassembly of the contents of SECTION in DISASSEMBLABLE.
+The contents are returned grouped by function."))
+
+(defmethod disassemble-section :around ((elf elf-const) section-name)
+  (with-slots (disassembly) elf
+    (or (gethash section-name disassembly)
+        (setf (gethash section-name disassembly) (call-next-method)))))
 
 
 ;;; Disassembly functions using objdump from GNU binutils
@@ -1568,7 +1591,7 @@ just filler bytes."
                     (cdr (split-sequence-if sec-header lines))))))
 
 (defmethod disassemble-section ((elf objdump) section-name)
-  (mapcan #'cdr (objdump-parse (objdump (named-section elf section-name)))))
+  (objdump-parse (objdump (named-section elf section-name))))
 
 
 ;;; Disassembly functions using csurf from GrammaTech
