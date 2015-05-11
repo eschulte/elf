@@ -15,7 +15,9 @@
   :components ((:file "package")
                (:file "util" :depends-on ("package"))
                (:file "elf" :depends-on ("package" "util"))
-               (:file "arm" :depends-on ("package" "util" "elf"))))
+               (:file "arm" :depends-on ("package" "util" "elf"))
+               (:file "disassemblable"
+                      :depends-on ("package" "util" "elf" "instruction"))))
 (defsystem :elf-test
   :description "Test the elf library."
   :version "0.0.0"
