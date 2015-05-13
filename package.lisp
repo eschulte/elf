@@ -56,6 +56,7 @@
    :elf :sh :ph :name :data
    ;; elf class
    :header :section-table :program-table :sections :ordering
+   :instruction :opcode :operands
    ;; ARM
    :arm-data
    :arm-instruction

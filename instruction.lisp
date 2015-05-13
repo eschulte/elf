@@ -33,6 +33,9 @@
 
 (defun parse-operand (string)       ; Currently as printed by objdump.
   "Parse an assembly instruction operand."
+  ;; FIXME: The quality of this translation is sufficient for
+  ;;        comparison and for notional reading, but insufficient for
+  ;;        more rigorous semantic applications (e.g., QFBV).
   (flet ((parse-register (string)
            (multiple-value-bind (match matches)
                (scan-to-strings "([abcdesixlp]\+)" (subseq string 1))
@@ -42,20 +45,20 @@
       (#\% (parse-register string))                   ; register
       (#\$ (parse-integer string :start 3 :radix 16)) ; literal
       (#\( `(,(parse-register (subseq string 1)))) ; register memory
-      (#\* `(,(parse-register (subseq string 1)))) ; register memory
+      (#\* (parse-operand (subseq string 1)))      ; discard leading *
       (#\0                              ; positive offset or literal
        (multiple-value-bind (num index)
            (parse-integer string :start 2 :radix 16 :junk-allowed t)
          (if (= index (length string))
              num
-             `(+ ,num (,(parse-register (subseq string (1+ index))))))))
+             `(+ (,(parse-register (subseq string (1+ index)))) ,num))))
       (#\-                              ; negative offset or literal
        (multiple-value-bind (num index)
            (parse-integer string :start 3 :radix 16 :junk-allowed t)
          (if (= index (length string))
              num
-             `(- ,num (,(parse-register (subseq string (1+ index))))))))
+             `(- (,(parse-register (subseq string (1+ index)))) ,num))))
       ((#\1 #\2 #\3 #\4 #\5 #\6 #\7 #\9 #\8 #\9 ; address
             #\a #\b #\c #\d #\e #\f #\A #\B #\C #\D #\E #\F)
-       (cons :address (parse-integer string :radix 16 :junk-allowed t)))
+       (parse-integer string :radix 16 :junk-allowed t))
       (t (error "Unhandled operand ~S" string)))))
