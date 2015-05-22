@@ -1,11 +1,15 @@
 ;;; instruction --- comparable machine code instructions
 (in-package :elf)
 
-(defclass instruction ()    ; Currently as parsed from Objdump output.
+(defclass instruction ()
   ((opcode   :initarg :opcode   :accessor opcode)
    (operands :initarg :operands :accessor operands :initform nil)))
 
-(defmethod print-object ((obj instruction) stream)
+(defclass objdump-instruction (instruction) ())
+
+(defclass tsl-instruction (instruction) ())
+
+(defmethod print-object ((obj objdump-instruction) stream)
   (print-unreadable-object (obj stream :type t)
     (prin1 (cons (opcode obj) (operands obj))
            stream)))
@@ -13,7 +17,7 @@
 (defgeneric from-string (instruction string)
   (:documentation "Parse an instruction from a string representation."))
 
-(defmethod from-string ((obj instruction) string)
+(defmethod from-string ((obj objdump-instruction) string)
   (unless (zerop (length string))
     (let ((pieces (split-sequence #\Space string :remove-empty-subseqs t))
           (depth 0))
@@ -62,3 +66,35 @@
             #\a #\b #\c #\d #\e #\f #\A #\B #\C #\D #\E #\F)
        (parse-integer string :radix 16 :junk-allowed t))
       (t (error "Unhandled operand ~S" string)))))
+
+(defmethod from-string ((obj tsl-instruction) string)
+  (unless (zerop (length string))
+    ;; Important part is in the parens (last parent is always last character).
+    (let* ((index (let ((index 0))
+                    (loop :do (incf index)
+                       :until (or (> index (length string))
+                                  (equal (aref string index) #\()))
+                    index))
+           (ops (split-sequence
+                    #\, (subseq string (1+ index) (1- (length string))))))
+      (setf (opcode obj) (parse-tsl-operand (nth 3 ops)))
+      (setf (operands obj) (mapcar #'parse-tsl-operand (subseq ops 4)))
+      obj)))
+
+(defmethod parse-tsl-operand (string)
+  (when (equal (aref string 0) #\Space) (setf string (subseq string 1)))
+  (flet ((beginning (substring)
+           (and (>= (length string) (length substring))
+                (string= (subseq string 0 (length substring)) substring))))
+    (cond
+      ((beginning "MOV") :mov)
+      ((beginning "EAX") :eax)
+      ((beginning "RegDirect32") (list (parse-tsl-operand
+                                        (subseq string
+                                                (1+ (length "RegDirect32"))
+                                                (1- (length string))))))
+      ((beginning "Immediate32") (parse-integer
+                                  (subseq string
+                                          (1+ (length "RegDirect32"))
+                                          (1- (length string)))))
+      (t string))))

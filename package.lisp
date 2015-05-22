@@ -51,7 +51,7 @@
    :size  :type  :flags :alignment :read-value :write-value
    :address :link :info :addralign :entsize :vaddr :paddr
    :filesz :memsz :align :sym-name :other :value :shndx :disasm
-   :rel-sym :rel-type :rel-info :magic-number
+   :rel-sym :rel-type :rel-info :magic-number :entry
    ;; section class
    :elf :sh :ph :name :data
    ;; elf class

@@ -15,6 +15,8 @@
   (:documentation
    "Disassemblable objects with caches holding disassembly by section name."))
 
+(defclass tsl (disassemblable) ())
+
 (defclass objdump-const (elf-const objdump) ()
   (:documentation "Caching objdump-backed ELF file."))
 
@@ -59,7 +61,7 @@ The contents are returned grouped by function."))
               (mappend (lambda (raw) (coerce (int-to-bytes raw 4) 'list))
                        raw-bytes)))
         ;; disassembled assembly text
-        (from-string (make-instance 'instruction)
+        (from-string (make-instance 'objdump-instruction)
                      (format nil "~{~a~^ ~}" disasm-str)))))
    (remove-if (lambda (line)
                 (or (< (length line) 9)
@@ -126,3 +128,24 @@ The contents are returned grouped by function."))
                      (setf last pair)))
                  (append (csurf-ins (project elf) section-name)
                          (list (cons (length data) "NO disasm")))))))
+
+
+;;; Disassembly functions using TSL-decoders from GrammaTech
+(defvar decoding-cmds '((:386 "ia32show")
+                        (:arm "armshow"))
+  "Name of the decoding commands listed by `machine'.
+Where `machine' is the elf header field.")
+
+(defun decode (section)
+  "Return the string representation of the instructions in SECTION."
+  (let ((cmd (second (assoc (machine (header (elf section))) decoding-cmds))))
+    (with-open-stream (in (make-in-memory-input-stream (data section)))
+      #+sbcl (sb-ext:process-output
+              (sb-ext:run-program
+               cmd nil :input in :output :stream :search t :wait nil))
+      #-sbcl (error "This lisp does not support `shell-stream'."))))
+
+(defmethod disassemble-section ((elf tsl) section-name)
+  (with-open-stream (instrs (decode (named-section elf section-name)))
+    (loop :for line = (read-line instrs nil :eof t) :until (eq line :eof)
+       :collect (from-string (make-instance 'tsl-instruction) line))))
