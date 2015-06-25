@@ -1393,7 +1393,7 @@ Each element of the resulting list is a triplet of (offset size header)."
    (lambda (sec)
      (let* ((beg (address (sh sec)))
             (end (+ beg (size sec))))
-       (and (> ea-start beg)
+       (and (>= ea-start beg)
             (< ea-start end)
             (or (not ea-end) (< ea-end end)))))
    (sections elf)))
