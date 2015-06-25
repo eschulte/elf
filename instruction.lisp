@@ -2,7 +2,8 @@
 (in-package :elf)
 
 (defclass instruction ()
-  ((opcode   :initarg :opcode   :accessor opcode)
+  ((prefixes :initarg :prefixes :accessor prefixes :initform nil)
+   (opcode   :initarg :opcode   :accessor opcode)
    (operands :initarg :operands :accessor operands :initform nil)))
 
 (defclass objdump-instruction (instruction) ())
@@ -17,10 +18,16 @@
 (defgeneric from-string (instruction string)
   (:documentation "Parse an instruction from a string representation."))
 
+(defvar instruction-prefixes
+  (list "rep" "repe" "repz" "repne" "repnz"
+        "data16" "lock"))
+
 (defmethod from-string ((obj objdump-instruction) string)
   (unless (zerop (length string))
     (let ((pieces (split-sequence #\Space string :remove-empty-subseqs t))
           (depth 0))
+      (loop :while (member (car pieces) instruction-prefixes :test #'equal)
+         :do (push (pop pieces) (prefixes obj)))
       (setf (opcode obj) (make-keyword (string-upcase (first pieces))))
       (setf (operands obj)
             (when (second pieces)
@@ -42,7 +49,8 @@
   ;;        more rigorous semantic applications (e.g., QFBV).
   (flet ((parse-register (string)
            (multiple-value-bind (match matches)
-               (scan-to-strings "([abcdesixlp]\+)" (subseq string 1))
+               (scan-to-strings "([abcdesixlp]\+|r[1-9][0-5]\?)"
+                                (subseq string 1))
              (unless match (error "Failed to parse register ~S" string))
              (make-keyword (string-upcase (aref matches 0))))))
     (case (aref string 0)
