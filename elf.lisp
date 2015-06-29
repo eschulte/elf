@@ -789,23 +789,45 @@
     (when (and dyn (equal (vma sec) (ptr dyn))) dyn)))
 
 (defgeneric binding (sym))
-(defmethod binding ((sym elf-sym))
-  (let ((val (ash (info sym) -4)))
-    (case val
-      (0 :local)
-      (1 :global)
-      (2 :weak)
-      (t val))))
+(defmethod binding ((symbol elf-sym))
+  (ecase (ash (info symbol) -4)
+    (0  :LOCAL)
+    (1  :GLOBAL)
+    (2  :WEAK)
+    (13 :LOPROC)
+    (15 :HIPROC)))
 
-(defmethod type ((sym elf-sym))
-  (let ((val (logand (info sym) #xf)))
-    (case val
-      (0 :notype)
-      (1 :object)
-      (2 :func)
-      (3 :section)
-      (4 :file)
-      (t val))))
+(defmethod (setf binding) (new (symbol elf-sym))
+  (setf (info symbol)
+        (+ (ash (ecase new
+                  (:LOCAL  0)
+                  (:GLOBAL 1)
+                  (:WEAK   2)
+                  (:LOPROC 13)
+                  (:HIPROC 15)) 4)
+           (logand (info symbol) #xf))))
+
+(defmethod type ((symbol elf-sym))
+  (ecase (logand (info symbol) #xf)
+    (0  :NOTYPE)
+    (1  :OBJECT)
+    (2  :FUNC)
+    (3  :SECTION)
+    (4  :FILE)
+    (13 :LOPROC)
+    (15 :HIPROC)))
+
+(defmethod (setf type) (new (symbol elf-sym))
+  (setf (info symbol)
+        (+ (ash (info symbol) -4)
+           (logand (ecase new
+                     (:NOTYPE  0)
+                     (:OBJECT  1)
+                     (:FUNC    2)
+                     (:SECTION 3)
+                     (:FILE    4)
+                     (:LOPROC  13)
+                     (:HIPROC  15)) #xf))))
 
 (defclass section ()
   ((elf  :initarg :elf  :accessor elf)
@@ -1310,21 +1332,23 @@ Note: the output should resemble the output of readelf -r."
                       collect ch)
                    'string)))
     (let ((dynsym (named-section elf ".dynsym"))
-          (dynstr (mapcar #'code-char
-                          (coerce (data (named-section elf ".dynstr")) 'list)))
+          (dynstr (let ((dynstr (named-section elf ".dynstr")))
+                    (when dynstr
+                      (mapcar #'code-char (coerce (data dynstr) 'list)))))
           (symtab (named-section elf ".symtab"))
           (strtab (mapcar #'code-char
                           (coerce (data (named-section elf ".strtab")) 'list))))
       (dolist (tab (list dynsym symtab))
-        (format t "~&~%Symbol table '~a' contains ~d entries:~%"
-                (name tab) (length (data tab)))
-        (format t "   Num:    Value  Size Type     Bind  Name~%")
-        (loop for sym in (data tab) as i from 0
-           do (format t "~6d: ~8x ~5d ~8a ~6a ~a~%"
-                      i (value sym) (size sym) (type sym) (binding sym)
-                      (string-at
-                       (if (string= ".dynstr" (name tab)) dynstr strtab)
-                       (name sym))))))))
+        (when tab
+          (format t "~&~%Symbol table '~a' contains ~d entries:~%"
+                  (name tab) (length (data tab)))
+          (format t "   Num:    Value  Size Type     Bind  Name~%")
+          (loop for sym in (data tab) as i from 0
+             do (format t "~6d: ~8x ~5d ~8a ~6a ~a~%"
+                        i (value sym) (size sym) (type sym) (binding sym)
+                        (string-at
+                         (if (string= ".dynstr" (name tab)) dynstr strtab)
+                         (name sym)))))))))
 
 (defun show-file-layout (elf)
   "Show the layout of the elements of an elf file with binary offset."
