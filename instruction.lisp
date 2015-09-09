@@ -59,11 +59,13 @@
       (#\( `(,(parse-register (subseq string 1)))) ; register memory
       (#\* (parse-operand (subseq string 1)))      ; discard leading *
       (#\0                              ; positive offset or literal
-       (multiple-value-bind (num index)
-           (parse-integer string :start 2 :radix 16 :junk-allowed t)
-         (if (= index (length string))
-             num
-             `(+ (,(parse-register (subseq string (1+ index)))) ,num))))
+       (if (string= string "0")
+           0
+           (multiple-value-bind (num index)
+               (parse-integer string :start 2 :radix 16 :junk-allowed t)
+             (if (= index (length string))
+                 num
+                 `(+ (,(parse-register (subseq string (1+ index)))) ,num)))))
       (#\-                              ; negative offset or literal
        (multiple-value-bind (num index)
            (parse-integer string :start 3 :radix 16 :junk-allowed t)
