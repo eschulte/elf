@@ -28,6 +28,8 @@
           (depth 0))
       (loop :while (member (car pieces) instruction-prefixes :test #'equal)
          :do (push (pop pieces) (prefixes obj)))
+      ;; TODO: handle data declarations e.g.,
+      ;;     400645:       66 66 2e 0f 1f 84 00 data32 nopw %cs:0x0(%rax,%rax,1)
       (setf (opcode obj) (make-keyword (string-upcase (first pieces))))
       (setf (operands obj)
             (when (second pieces)
