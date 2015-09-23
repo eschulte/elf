@@ -32,7 +32,9 @@
       ;;     400645:       66 66 2e 0f 1f 84 00 data32 nopw %cs:0x0(%rax,%rax,1)
       (setf (opcode obj) (make-keyword (string-upcase (first pieces))))
       (setf (operands obj)
-            (when (second pieces)
+            (when (and (second pieces)
+                       (not (member (opcode obj)
+                                    (list :data32))))
               (mapcar #'parse-operand
                       ;; Split the instruction encoding STRING into
                       ;; opcode and operands.
