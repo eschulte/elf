@@ -26,6 +26,7 @@
    :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols
+   :file-offset-of-ea
    ;; Modification functions
    :index-of-ea
    :sections-holding-ea

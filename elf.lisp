@@ -1414,6 +1414,13 @@ Each element of the resulting list is a triplet of (offset size header)."
    (memory-sorted-sections elf))
   nil)
 
+(defgeneric file-offset-of-ea (elf ea)
+  (:documentation "Return the file offset in ELF of EA."))
+
+(defmethod file-offset-of-ea ((obj elf) ea)
+  (let ((section (section-holding-ea obj ea)))
+    (+ (offset (sh section)) (- ea (address (sh section))))))
+
 
 ;;; Modification functions
 (defmethod index-of-ea ((obj section) ea)
