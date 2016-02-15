@@ -65,7 +65,7 @@ The contents are returned grouped by function."))
                      (format nil "~{~a~^ ~}" disasm-str)))))
    (remove-if (lambda (line)
                 (or (< (length line) 9)
-                    (not (equal #\: (aref line 8)))))
+                    (not (scan-to-strings "[0-9a-f]+:" line))))
               lines)))
 
 (defun objdump-parse (output)
