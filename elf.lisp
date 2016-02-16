@@ -1379,13 +1379,20 @@ Each element of the resulting list is a triplet of (offset size header)."
   (with-slots (sections section-table program-table) elf
     (stable-sort
      (remove-if
-      (lambda (trio) (zerop (first trio)))
+      #'null
       (append
        (mapcar (lambda (head)
-                 (list (vaddr head) (memsz head) head))
+                 (when (not (zerop (vaddr head)))
+                   (list (vaddr head) (memsz head) head)))
                program-table)
        (when section-table
-         (mapcar (lambda (sec) (list (address (sh sec)) (size sec) sec))
+         (mapcar (lambda (sec) 
+                   (when (or (not (zerop (address (sh sec))))
+                             (and (zerop (address (sh sec)))
+                                  (member (flags (sh sec))
+                                          '(:allocatable))
+                                  (equal :progbits (type (sh sec)))))
+                     (list (address (sh sec)) (size sec) sec)))
                  sections))))
      #'< :key #'car)))
 
