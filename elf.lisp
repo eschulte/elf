@@ -1302,7 +1302,7 @@ Note: the output should resemble the output of readelf -r."
       (dolist (sec (sections elf))
         (when (member (type sec) '(:rel :rela))
           (with-slots (sh name data) sec
-            (let ((syms (data (nth 5 (sections elf)))))
+            (let ((syms (symbols elf)))
               (format t sec-f name (offset sh) (length data))
               (format t rel-h)
               (mapcar
