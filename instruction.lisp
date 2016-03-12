@@ -53,8 +53,9 @@
   ;;        more rigorous semantic applications (e.g., QFBV).
   (flet ((parse-register (string)
            (multiple-value-bind (match matches)
-               (scan-to-strings "([abcdesixlp]\+|r[1-9][0-5]\?)"
-                                (subseq string 1))
+               (scan-to-strings
+                 "(xm{2}[0-9][0-5]\?|[abcdesixlp]\+|r[1-9][0-5]\?)"
+                 (subseq string 1))
              (unless match (error "Failed to parse register ~S" string))
              (make-keyword (string-upcase (aref matches 0))))))
     (case (aref string 0)
