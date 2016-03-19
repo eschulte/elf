@@ -10,7 +10,7 @@
 
 (defclass tsl-instruction (instruction) ())
 
-(defmethod print-object ((obj objdump-instruction) stream)
+(defmethod print-object ((obj instruction) stream)
   (print-unreadable-object (obj stream :type t)
     (prin1 (cons (opcode obj) (operands obj))
            stream)))
