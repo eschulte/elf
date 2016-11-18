@@ -47,17 +47,35 @@ After BODY is executed the temporary file is removed."
      (unwind-protect (progn ,@body)
        (when (probe-file ,file) (delete-file ,file)))))
 
+(defun file-to-string (path)
+  (with-open-file (in path)
+    (let ((seq (make-string (file-length in))))
+      (read-sequence seq in)
+      seq)))
+
+(defun shell (command)
+  #+ecl          (ext:system command)
+  #+ccl          (with-temp-file stdout-file
+                   (with-temp-file stderr-file
+                     (multiple-value-bind (stdout stderr errno)
+                         ;; Workaround Clozure bug with large outputs
+                         ;; by writing stdout/stderr to file and slurping
+                         ;; the file back up to return.
+                         (shell-command (format nil "~a 1>~a 2>~a"
+                                                command
+                                                stdout-file stderr-file))
+                       (declare (ignorable stdout stderr))
+                       (values (file-to-string stdout-file)
+                               (file-to-string stderr-file)
+                               errno))))
+  #-(or ccl ecl) (shell-command command))
+
 (defun trim (str &key (chars '(#\Space #\Tab #\Newline)))
   (loop until (or (emptyp str) (not (member (aref str 0) chars)))
      do (setf str (subseq str 1)))
   (loop until (or (emptyp str) (not (member (aref str (1- (length str))) chars)))
      do (setf str (subseq str 0 (1- (length str)))))
   str)
-
-(defun shell (command)
-  #+ecl          (ext:system command)
-  #+ccl          (shell-command command :input "")
-  #-(or ccl ecl) (shell-command command))
 
 ;;; generic forensic functions over arbitrary objects
 (defun my-slot-definition-name (el)
