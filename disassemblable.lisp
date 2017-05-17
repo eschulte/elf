@@ -7,7 +7,7 @@
 (defclass objdump (disassemblable) ())
 
 (defclass csurf (disassemblable)
-  ((project :initarg :project :accessor project :initform nil)))
+  ((sw-project :initarg :project :accessor project :initform nil)))
 
 (defclass elf-const (disassemblable)
   ((disassembly :initarg :disassembly :accessor disassembly
@@ -99,10 +99,10 @@ The contents are returned grouped by function."))
    :name "sections"
    :type "stk"))
 
-(defmethod csurf-ins (project section)
+(defmethod csurf-ins (sw-project section)
   (multiple-value-bind (stdout stderr errno)
       (shell (format nil "~a ~a -l ~a -- ~a"
-                     csurf-cmd project csurf-script section))
+                     csurf-cmd sw-project csurf-script section))
     (unless (zerop errno)
       (error "csurf failed with ~s" stderr))
     ;; parse addresses
@@ -126,7 +126,7 @@ The contents are returned grouped by function."))
                                           'list)
                                   (cdr last)))
                      (setf last pair)))
-                 (append (csurf-ins (project elf) section-name)
+                 (append (csurf-ins (sw-project elf) section-name)
                          (list (cons (length data) "NO disasm")))))))
 
 
