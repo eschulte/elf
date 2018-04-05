@@ -2,7 +2,6 @@
 (defsystem :elf
   :name "elf"
   :author "Eric Schulte <schulte.eric@gmail.com>"
-  :license "GPL V3"
   :description "Common Lisp library for manipulation of ELF files."
   :version "0.1"
   :depends-on (alexandria
@@ -22,7 +21,6 @@
 (defsystem :elf-test
   :description "Test the elf library."
   :version "0.0.0"
-  :licence "GPL V3"
   :depends-on
   (alexandria metabang-bind elf stefil trivial-timeout)
   :components
