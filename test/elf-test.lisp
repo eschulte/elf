@@ -5,7 +5,7 @@
 ;; Licensed under the Gnu Public License Version 3 or later
 
 ;;; Code:
-(in-package :elf-test)
+(in-package :elf/test)
 
 (defsuite test)
 (in-suite test)

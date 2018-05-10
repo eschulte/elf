@@ -1,5 +1,5 @@
 ;; Copyright (C) 2011-2013 Eric Schulte
-(defsystem :elf
+(defsystem "elf"
   :name "elf"
   :author "Eric Schulte <schulte.eric@gmail.com>"
   :description "Common Lisp library for manipulation of ELF files."
@@ -18,7 +18,8 @@
                (:file "instruction" :depends-on ("package"))
                (:file "disassemblable"
                       :depends-on ("package" "util" "elf" "instruction"))))
-(defsystem :elf-test
+
+(defsystem "elf/test"
   :description "Test the elf library."
   :version "0.0.0"
   :depends-on
