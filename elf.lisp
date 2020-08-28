@@ -1287,8 +1287,9 @@ section (in the file)."
   (with-open-file (in file :element-type '(unsigned-byte 8))
     (read-value type in)))
 
-(defun write-elf (elf file)
-  (with-open-file (out file :direction :output :element-type '(unsigned-byte 8))
+(defun write-elf (elf file &key (if-exists :error))
+  (with-open-file (out file :direction :output :element-type '(unsigned-byte 8)
+                       :if-exists if-exists)
     (write-value 'elf out elf))
   nil)
 
