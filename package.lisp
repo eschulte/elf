@@ -23,6 +23,7 @@
    :bytes-to-int :int-to-bytes
    :bits-to-int  :int-to-bits
    :named-section :elf-p :elf-header
+   :get-endianness
    :read-elf :write-elf
    :show-dynamic :show-symbols :show-file-layout :show-memory-layout
    :mapslots :generic-copy :copy-elf :named-symbol :symbols

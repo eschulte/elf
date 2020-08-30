@@ -1270,6 +1270,32 @@ section (in the file)."
     (car (member (coerce (read-value 'string in :length 4) 'list)
                  elf-magic-numbers :test #'equalp))))
 
+(defgeneric get-endianness (in)
+  (:documentation "Read the endianness byte of a file and set *ENDIAN* appropriately.
+On an existing file stream this does not change the file-position of the stream.")
+  (:method ((in pathname))
+    (with-open-file (s in :direction :input :element-type '(unsigned-byte 8))
+      (get-endianness s)))
+  (:method ((in string))
+    (with-open-file (s in :direction :input :element-type '(unsigned-byte 8))
+      (get-endianness s)))
+  (:method ((in file-stream))
+    (when (< (file-length in) 6)
+      (error "File associated with ~a is too short to be an ELF file"))
+    (let ((initial-pos (file-position in)))
+      (unwind-protect
+           (progn
+             (file-position in 5)
+             (let ((b (read-byte in 5)))
+               (case b
+                 ;; https://www.amazon.com/Little-Big-John-Crowley/dp/0061120057
+                 (1 (setf *endian* :little))
+                 (2 (setf *endian* :big))
+                 (t (error "Endian byte of ~a is ~a; should be 1 or 2"
+                           in b)))))
+        (file-position in initial-pos))
+      *endian*)))
+
 (defun elf-header-endianness-warn (header)
   "Raise a warning if HEADER was read using the wrong endianness."
   (when (if (eq *endian* :little)
