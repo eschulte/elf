@@ -15,14 +15,19 @@
 (defvar *test-class* :32-bit "architecture to test (e.g. 32-bit or 64-bit)")
 (defvar *tmp-file* nil "temporary file used for testing")
 (defvar *elf* nil "variable to hold elf object")
+(macrolet ((%m () *compile-file-truename*))
+  (defparameter *test-truename* (%m)))
 
 (defixture hello-elf
   (:setup
    (setf *tmp-file* "./hello.tmp")
    (when (probe-file *tmp-file*) (delete-file *tmp-file*))
-   (setf *elf* (read-elf (case *test-class*
-                           (:32-bit "hello32")
-                           (:64-bit "hello64")))))
+   (setf *elf* (read-elf (make-pathname
+                          :type nil
+                          :name (case *test-class*
+                                  (:32-bit "hello32")
+                                  (:64-bit "hello64"))
+                          :defaults *test-truename*))))
   (:teardown
    (when (probe-file *tmp-file*)
      (delete-file *tmp-file*))))
@@ -110,7 +115,8 @@
        (objdump-parse (objdump (named-section *elf* ".text")))))))
 
 (deftest test-objdump-parse-empty-instructions ()
-  (let ((lines (with-open-file (in "main.txt")
+  (let ((lines (with-open-file (in (make-pathname :name "main" :type "txt"
+                                                  :defaults *test-truename*))
                                (loop for line = (read-line in nil :eof)
                                   until (eq line :eof)
                                   collect line))))
